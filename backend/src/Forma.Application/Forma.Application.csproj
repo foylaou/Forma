@@ -5,6 +5,18 @@
     <ProjectReference Include="..\Forma.Shared\Forma.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Object Mapping (AutoMapper 13+ has built-in DI support) -->
+    <PackageReference Include="AutoMapper" Version="14.0.0" />
+
+    <!-- Validation -->
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+
+    <!-- CQRS / Mediator -->
+    <PackageReference Include="MediatR" Version="14.0.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

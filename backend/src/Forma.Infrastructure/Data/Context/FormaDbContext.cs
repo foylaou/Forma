@@ -1,0 +1,53 @@
+using Forma.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace Forma.Infrastructure.Data.Context;
+
+/// <summary>
+/// Forma 資料庫上下文
+/// </summary>
+public class FormaDbContext : DbContext
+{
+    public FormaDbContext(DbContextOptions<FormaDbContext> options) : base(options)
+    {
+    }
+
+    // DbSets
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+    public DbSet<Form> Forms => Set<Form>();
+    public DbSet<FormSubmission> FormSubmissions => Set<FormSubmission>();
+    public DbSet<FormTemplate> FormTemplates => Set<FormTemplate>();
+    public DbSet<FormPermission> FormPermissions => Set<FormPermission>();
+    public DbSet<Report> Reports => Set<Report>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // 套用所有實體配置
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(FormaDbContext).Assembly);
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // 自動設定審計欄位
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.Entity.CreatedAt = DateTime.UtcNow;
+                    break;
+                case EntityState.Modified:
+                    entry.Entity.UpdatedAt = DateTime.UtcNow;
+                    break;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
+}

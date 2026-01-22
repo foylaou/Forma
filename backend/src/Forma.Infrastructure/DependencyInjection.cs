@@ -1,0 +1,59 @@
+using Forma.Domain.Interfaces;
+using Forma.Infrastructure.Data.Context;
+using Forma.Infrastructure.Data.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Forma.Infrastructure;
+
+/// <summary>
+/// Infrastructure 層依賴注入配置
+/// </summary>
+public static class DependencyInjection
+{
+    /// <summary>
+    /// 註冊 Infrastructure 層服務
+    /// </summary>
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        // DbContext
+        services.AddDbContext<FormaDbContext>(options =>
+        {
+            options.UseNpgsql(
+                configuration.GetConnectionString("DefaultConnection"),
+                npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsAssembly(typeof(FormaDbContext).Assembly.FullName);
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(5),
+                        errorCodesToAdd: null);
+                });
+        });
+
+        // Repositories
+        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        // Redis Cache
+        var redisConnection = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrEmpty(redisConnection))
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnection;
+                options.InstanceName = "Forma:";
+            });
+        }
+        else
+        {
+            // 使用記憶體快取作為備用
+            services.AddDistributedMemoryCache();
+        }
+
+        return services;
+    }
+}
