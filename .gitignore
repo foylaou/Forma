@@ -1,0 +1,133 @@
+# =================================
+# Forma - Git Ignore Configuration
+# =================================
+
+# ---------------------------------
+# IDE / Editor
+# ---------------------------------
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# ---------------------------------
+# Frontend (React/Node.js)
+# ---------------------------------
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnpm-debug.log*
+
+# ---------------------------------
+# Backend (.NET)
+# ---------------------------------
+backend/**/bin/
+backend/**/obj/
+backend/**/.vs/
+backend/**/*.user
+backend/**/*.rsuser
+backend/**/launchSettings.json
+backend/**/*.db
+backend/**/*.db-shm
+backend/**/*.db-wal
+
+# NuGet
+backend/**/*.nupkg
+backend/**/packages/
+backend/**/.nuget/
+
+# User secrets
+backend/**/secrets.json
+
+# ---------------------------------
+# Build outputs
+# ---------------------------------
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# ---------------------------------
+# Test Results
+# ---------------------------------
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+*.lcov
+
+# ---------------------------------
+# OS Generated
+# ---------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ---------------------------------
+# Environment & Secrets
+# ---------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+
+# ---------------------------------
+# Docker
+# ---------------------------------
+docker-compose.override.yml
+.docker/
+
+# ---------------------------------
+# Uploads & Generated Files
+# ---------------------------------
+uploads/
+storage/
+exports/
+temp/
+*.tmp
+
+# ---------------------------------
+# Logs
+# ---------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------------------------------
+# Misc
+# ---------------------------------
+*.swp
+*.swo
+*~
+.cache/
+.temp/
+.tmp/

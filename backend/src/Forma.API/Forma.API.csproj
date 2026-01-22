@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Forma.Application\Forma.Application.csproj" />
+    <ProjectReference Include="..\Forma.Infrastructure\Forma.Infrastructure.csproj" />
+    <ProjectReference Include="..\Forma.Shared\Forma.Shared.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>
