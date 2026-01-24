@@ -291,6 +291,49 @@ namespace Forma.Infrastructure.Migrations
                     b.ToTable("FormTemplates", (string)null);
                 });
 
+            modelBuilder.Entity("Forma.Domain.Entities.FormVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChangeNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FormId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Schema")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("FormId");
+
+                    b.HasIndex("FormId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("FormVersions", (string)null);
+                });
+
             modelBuilder.Entity("Forma.Domain.Entities.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -416,6 +459,9 @@ namespace Forma.Infrastructure.Migrations
                     b.Property<DateTime?>("RemovedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("RemovedById")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -428,6 +474,8 @@ namespace Forma.Infrastructure.Migrations
 
                     b.HasIndex("AddedById");
 
+                    b.HasIndex("RemovedById");
+
                     b.HasIndex("Role");
 
                     b.HasIndex("UserId");
@@ -436,6 +484,57 @@ namespace Forma.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("ProjectMembers", (string)null);
+                });
+
+            modelBuilder.Entity("Forma.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceInfo")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<string>("ReplacedByToken")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RevokedReason")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("Forma.Domain.Entities.Report", b =>
@@ -643,6 +742,25 @@ namespace Forma.Infrastructure.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("Forma.Domain.Entities.FormVersion", b =>
+                {
+                    b.HasOne("Forma.Domain.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Forma.Domain.Entities.Form", "Form")
+                        .WithMany("Versions")
+                        .HasForeignKey("FormId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Form");
+                });
+
             modelBuilder.Entity("Forma.Domain.Entities.Project", b =>
                 {
                     b.HasOne("Forma.Domain.Entities.User", "CreatedBy")
@@ -676,6 +794,11 @@ namespace Forma.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Forma.Domain.Entities.User", "RemovedBy")
+                        .WithMany()
+                        .HasForeignKey("RemovedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Forma.Domain.Entities.User", "User")
                         .WithMany("ProjectMemberships")
                         .HasForeignKey("UserId")
@@ -685,6 +808,19 @@ namespace Forma.Infrastructure.Migrations
                     b.Navigation("AddedBy");
 
                     b.Navigation("Project");
+
+                    b.Navigation("RemovedBy");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Forma.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("Forma.Domain.Entities.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -715,6 +851,8 @@ namespace Forma.Infrastructure.Migrations
                     b.Navigation("Reports");
 
                     b.Navigation("Submissions");
+
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("Forma.Domain.Entities.FormTemplate", b =>
@@ -747,6 +885,8 @@ namespace Forma.Infrastructure.Migrations
                     b.Navigation("CreatedTemplates");
 
                     b.Navigation("ProjectMemberships");
+
+                    b.Navigation("RefreshTokens");
 
                     b.Navigation("Submissions");
                 });

@@ -1,3 +1,4 @@
+using Forma.API.Extensions;
 using Forma.Application;
 using Forma.Infrastructure;
 
@@ -8,20 +9,16 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration);
 
+// JWT Authentication & Authorization
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddAuthorizationPolicies();
+
 // Controllers
 builder.Services.AddControllers();
 
-// Swagger/OpenAPI
+// Swagger/OpenAPI with JWT support
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "Forma API",
-        Version = "v1",
-        Description = "Forma - 動態表單管理系統 API"
-    });
-});
+builder.Services.AddSwaggerWithJwt();
 
 // CORS
 builder.Services.AddCors(options =>

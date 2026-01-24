@@ -32,6 +32,11 @@ public class ProjectMemberConfiguration : IEntityTypeConfiguration<ProjectMember
             .HasForeignKey(pm => pm.AddedById)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(pm => pm.RemovedBy)
+            .WithMany()
+            .HasForeignKey(pm => pm.RemovedById)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Indexes
         builder.HasIndex(pm => new { pm.ProjectId, pm.UserId }).IsUnique();
         builder.HasIndex(pm => pm.Role);

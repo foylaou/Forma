@@ -12,7 +12,7 @@
 *.userosscache
 *.sln.docstates
 .vs/
-
+.claude
 # ---------------------------------
 # Frontend (React/Node.js)
 # ---------------------------------

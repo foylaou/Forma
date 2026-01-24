@@ -6,6 +6,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Entity Framework Core (for DbSet interface) -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+
     <!-- Object Mapping (AutoMapper 13+ has built-in DI support) -->
     <PackageReference Include="AutoMapper" Version="14.0.0" />
 

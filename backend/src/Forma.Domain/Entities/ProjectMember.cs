@@ -37,8 +37,14 @@ public class ProjectMember : BaseEntity
     /// </summary>
     public DateTime? RemovedAt { get; set; }
 
+    /// <summary>
+    /// 移除者 ID
+    /// </summary>
+    public Guid? RemovedById { get; set; }
+
     // Navigation Properties
     public virtual Project Project { get; set; } = null!;
     public virtual User User { get; set; } = null!;
     public virtual User AddedBy { get; set; } = null!;
+    public virtual User? RemovedBy { get; set; }
 }

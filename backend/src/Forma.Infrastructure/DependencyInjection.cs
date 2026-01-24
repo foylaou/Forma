@@ -1,6 +1,9 @@
+using Forma.Application.Common.Interfaces;
 using Forma.Domain.Interfaces;
+using Forma.Infrastructure.Auth;
 using Forma.Infrastructure.Data.Context;
 using Forma.Infrastructure.Data.Repositories;
+using Forma.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +56,16 @@ public static class DependencyInjection
             // 使用記憶體快取作為備用
             services.AddDistributedMemoryCache();
         }
+
+        // Authentication Services
+        services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.AddSingleton<IJwtSettings>(sp =>
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<JwtSettings>>().Value);
+        services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<FormaDbContext>());
+        services.AddHttpContextAccessor();
 
         return services;
     }

@@ -1,3 +1,4 @@
+using Forma.Application.Common.Interfaces;
 using Forma.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +7,7 @@ namespace Forma.Infrastructure.Data.Context;
 /// <summary>
 /// Forma 資料庫上下文
 /// </summary>
-public class FormaDbContext : DbContext
+public class FormaDbContext : DbContext, IApplicationDbContext
 {
     public FormaDbContext(DbContextOptions<FormaDbContext> options) : base(options)
     {
@@ -20,9 +21,14 @@ public class FormaDbContext : DbContext
     public DbSet<Form> Forms => Set<Form>();
     public DbSet<FormSubmission> FormSubmissions => Set<FormSubmission>();
     public DbSet<FormTemplate> FormTemplates => Set<FormTemplate>();
+    public DbSet<FormVersion> FormVersions => Set<FormVersion>();
     public DbSet<FormPermission> FormPermissions => Set<FormPermission>();
     public DbSet<Report> Reports => Set<Report>();
+    public DbSet<Export> Exports => Set<Export>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -64,4 +64,5 @@ public class Form : AuditableEntity
     public virtual ICollection<FormSubmission> Submissions { get; set; } = new List<FormSubmission>();
     public virtual ICollection<FormPermission> Permissions { get; set; } = new List<FormPermission>();
     public virtual ICollection<Report> Reports { get; set; } = new List<Report>();
+    public virtual ICollection<FormVersion> Versions { get; set; } = new List<FormVersion>();
 }
