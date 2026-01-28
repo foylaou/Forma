@@ -1,24 +1,14 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
-using Forma.Application.Features.Projects.Commands.AddProjectMember;
-using Forma.Application.Features.Projects.Commands.ArchiveProject;
-using Forma.Application.Features.Projects.Commands.CreateProject;
-using Forma.Application.Features.Projects.Commands.DeleteProject;
-using Forma.Application.Features.Projects.Commands.RemoveProjectMember;
-using Forma.Application.Features.Projects.Commands.UpdateProject;
-using Forma.Application.Features.Projects.Commands.UpdateProjectMember;
 using Forma.Application.Features.Projects.DTOs;
-using Forma.Application.Features.Projects.Queries.GetAvailableMembers;
-using Forma.Application.Features.Projects.Queries.GetManagedProjects;
-using Forma.Application.Features.Projects.Queries.GetOrganizationProjects;
-using Forma.Application.Features.Projects.Queries.GetParticipatedProjects;
-using Forma.Application.Features.Projects.Queries.GetProjectById;
-using Forma.Application.Features.Projects.Queries.GetProjectMembers;
-using Forma.Application.Features.Projects.Queries.GetProjects;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ServiceCreateProjectRequest = Forma.Application.Services.CreateProjectRequest;
+using ServiceUpdateProjectRequest = Forma.Application.Services.UpdateProjectRequest;
+using ServiceAddProjectMemberRequest = Forma.Application.Services.AddProjectMemberRequest;
+using ServiceUpdateProjectMemberRequest = Forma.Application.Services.UpdateProjectMemberRequest;
 
 namespace Forma.API.Controllers;
 
@@ -30,12 +20,12 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class ProjectsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IProjectService _projectService;
     private readonly ICurrentUserService _currentUser;
 
-    public ProjectsController(IMediator mediator, ICurrentUserService currentUser)
+    public ProjectsController(IProjectService projectService, ICurrentUserService currentUser)
     {
-        _mediator = mediator;
+        _projectService = projectService;
         _currentUser = currentUser;
     }
 
@@ -53,10 +43,8 @@ public class ProjectsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetProjectsQuery
+        var request = new GetProjectsRequest
         {
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin,
             SearchTerm = searchTerm,
             Year = year,
             Status = status,
@@ -67,7 +55,10 @@ public class ProjectsController : ControllerBase
             PageSize = pageSize
         };
 
-        var result = await _mediator.Send(query);
+        var result = await _projectService.GetProjectsAsync(
+            request,
+            _currentUser.UserId!.Value,
+            _currentUser.IsSystemAdmin);
         return Ok(result);
     }
 
@@ -84,19 +75,22 @@ public class ProjectsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetParticipatedProjectsQuery
+        var request = new GetProjectsRequest
         {
-            CurrentUserId = _currentUser.UserId!.Value,
             SearchTerm = searchTerm,
             Year = year,
             Status = status,
+            OnlyMyProjects = true,
             SortBy = sortBy,
             SortDescending = sortDescending,
             PageNumber = pageNumber,
             PageSize = pageSize
         };
 
-        var result = await _mediator.Send(query);
+        var result = await _projectService.GetProjectsAsync(
+            request,
+            _currentUser.UserId!.Value,
+            _currentUser.IsSystemAdmin);
         return Ok(result);
     }
 
@@ -113,19 +107,22 @@ public class ProjectsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetManagedProjectsQuery
+        var request = new GetProjectsRequest
         {
-            CurrentUserId = _currentUser.UserId!.Value,
             SearchTerm = searchTerm,
             Year = year,
             Status = status,
+            OnlyMyProjects = true,
             SortBy = sortBy,
             SortDescending = sortDescending,
             PageNumber = pageNumber,
             PageSize = pageSize
         };
 
-        var result = await _mediator.Send(query);
+        var result = await _projectService.GetProjectsAsync(
+            request,
+            _currentUser.UserId!.Value,
+            _currentUser.IsSystemAdmin);
         return Ok(result);
     }
 
@@ -135,16 +132,12 @@ public class ProjectsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProjectDto>> GetProject(Guid id)
     {
-        var query = new GetProjectByIdQuery
-        {
-            ProjectId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _projectService.GetProjectByIdAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -163,7 +156,7 @@ public class ProjectsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Guid>> CreateProject([FromBody] CreateProjectRequest request)
     {
-        var command = new CreateProjectCommand
+        var serviceRequest = new ServiceCreateProjectRequest
         {
             OrganizationId = request.OrganizationId,
             Name = request.Name,
@@ -172,13 +165,14 @@ public class ProjectsController : ControllerBase
             Year = request.Year,
             Budget = request.Budget,
             StartDate = request.StartDate,
-            EndDate = request.EndDate,
-            CurrentUserId = _currentUser.UserId!.Value
+            EndDate = request.EndDate
         };
 
         try
         {
-            var projectId = await _mediator.Send(command);
+            var projectId = await _projectService.CreateProjectAsync(
+                serviceRequest,
+                _currentUser.UserId!.Value);
             return CreatedAtAction(nameof(GetProject), new { id = projectId }, new { id = projectId });
         }
         catch (InvalidOperationException ex)
@@ -193,9 +187,8 @@ public class ProjectsController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ProjectDto>> UpdateProject(Guid id, [FromBody] UpdateProjectRequest request)
     {
-        var command = new UpdateProjectCommand
+        var serviceRequest = new ServiceUpdateProjectRequest
         {
-            ProjectId = id,
             Name = request.Name,
             Description = request.Description,
             Year = request.Year,
@@ -203,13 +196,16 @@ public class ProjectsController : ControllerBase
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             Status = request.Status,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
+            Settings = request.Settings
         };
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _projectService.UpdateProjectAsync(
+                id,
+                serviceRequest,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -228,16 +224,12 @@ public class ProjectsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult> DeleteProject(Guid id)
     {
-        var command = new DeleteProjectCommand
-        {
-            ProjectId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            await _mediator.Send(command);
+            await _projectService.DeleteProjectAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -260,16 +252,12 @@ public class ProjectsController : ControllerBase
     [HttpGet("{id:guid}/members")]
     public async Task<ActionResult<List<ProjectMemberDto>>> GetProjectMembers(Guid id)
     {
-        var query = new GetProjectMembersQuery
-        {
-            ProjectId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _projectService.GetProjectMembersAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -288,18 +276,19 @@ public class ProjectsController : ControllerBase
     [HttpPost("{id:guid}/members")]
     public async Task<ActionResult<ProjectMemberDto>> AddProjectMember(Guid id, [FromBody] AddProjectMemberRequest request)
     {
-        var command = new AddProjectMemberCommand
+        var serviceRequest = new ServiceAddProjectMemberRequest
         {
-            ProjectId = id,
             UserId = request.UserId,
-            Role = request.Role,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
+            Role = request.Role
         };
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _projectService.AddProjectMemberAsync(
+                id,
+                serviceRequest,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return CreatedAtAction(nameof(GetProjectMembers), new { id = id }, result);
         }
         catch (KeyNotFoundException ex)
@@ -322,18 +311,19 @@ public class ProjectsController : ControllerBase
     [HttpPut("{id:guid}/members/{userId:guid}")]
     public async Task<ActionResult<ProjectMemberDto>> UpdateProjectMember(Guid id, Guid userId, [FromBody] UpdateProjectMemberRequest request)
     {
-        var command = new UpdateProjectMemberCommand
+        var serviceRequest = new ServiceUpdateProjectMemberRequest
         {
-            ProjectId = id,
-            UserId = userId,
-            Role = request.Role,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
+            Role = request.Role
         };
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _projectService.UpdateProjectMemberAsync(
+                id,
+                userId,
+                serviceRequest,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -356,17 +346,13 @@ public class ProjectsController : ControllerBase
     [HttpDelete("{id:guid}/members/{userId:guid}")]
     public async Task<ActionResult> RemoveProjectMember(Guid id, Guid userId)
     {
-        var command = new RemoveProjectMemberCommand
-        {
-            ProjectId = id,
-            UserId = userId,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            await _mediator.Send(command);
+            await _projectService.RemoveProjectMemberAsync(
+                id,
+                userId,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -389,17 +375,13 @@ public class ProjectsController : ControllerBase
     [HttpPost("{id:guid}/leave")]
     public async Task<ActionResult> LeaveProject(Guid id)
     {
-        var command = new RemoveProjectMemberCommand
-        {
-            ProjectId = id,
-            UserId = _currentUser.UserId!.Value,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            await _mediator.Send(command);
+            await _projectService.RemoveProjectMemberAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -418,16 +400,12 @@ public class ProjectsController : ControllerBase
     [HttpPost("{id:guid}/archive")]
     public async Task<ActionResult<ProjectDto>> ArchiveProject(Guid id)
     {
-        var command = new ArchiveProjectCommand
-        {
-            ProjectId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _projectService.ArchiveProjectAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -453,18 +431,19 @@ public class ProjectsController : ControllerBase
         [FromQuery] string? searchTerm = null,
         [FromQuery] int limit = 20)
     {
-        var query = new GetAvailableMembersQuery
+        var request = new GetAvailableMembersRequest
         {
-            ProjectId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin,
             SearchTerm = searchTerm,
             Limit = limit
         };
 
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _projectService.GetAvailableMembersAsync(
+                id,
+                request,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -501,6 +480,7 @@ public class UpdateProjectRequest
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public string? Status { get; set; }
+    public string? Settings { get; set; }
 }
 
 public class AddProjectMemberRequest

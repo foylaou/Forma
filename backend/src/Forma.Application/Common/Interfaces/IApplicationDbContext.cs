@@ -79,6 +79,21 @@ public interface IApplicationDbContext
     DbSet<NotificationPreference> NotificationPreferences { get; }
 
     /// <summary>
+    /// 上傳檔案
+    /// </summary>
+    DbSet<UploadedFile> UploadedFiles { get; }
+
+    /// <summary>
+    /// 操作日誌
+    /// </summary>
+    DbSet<ActionLog> ActionLogs { get; }
+
+    /// <summary>
+    /// 系統設定
+    /// </summary>
+    DbSet<SystemSetting> SystemSettings { get; }
+
+    /// <summary>
     /// 儲存變更
     /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

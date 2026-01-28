@@ -2,13 +2,7 @@ using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
 using Forma.Application.Features.Dashboard.DTOs;
-using Forma.Application.Features.Dashboard.Queries.GetDashboardSummary;
-using Forma.Application.Features.Dashboard.Queries.GetPendingReviewSubmissions;
-using Forma.Application.Features.Dashboard.Queries.GetPendingTasks;
-using Forma.Application.Features.Dashboard.Queries.GetPersonalStatistics;
-using Forma.Application.Features.Dashboard.Queries.GetProjectsStats;
-using Forma.Application.Features.Dashboard.Queries.GetRecentActivities;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,12 +16,12 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class DashboardController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IDashboardService _dashboardService;
     private readonly ICurrentUserService _currentUser;
 
-    public DashboardController(IMediator mediator, ICurrentUserService currentUser)
+    public DashboardController(IDashboardService dashboardService, ICurrentUserService currentUser)
     {
-        _mediator = mediator;
+        _dashboardService = dashboardService;
         _currentUser = currentUser;
     }
 
@@ -37,12 +31,7 @@ public class DashboardController : ControllerBase
     [HttpGet("summary")]
     public async Task<ActionResult<DashboardSummaryDto>> GetSummary()
     {
-        var query = new GetDashboardSummaryQuery
-        {
-            CurrentUserId = _currentUser.UserId!.Value
-        };
-
-        var result = await _mediator.Send(query);
+        var result = await _dashboardService.GetDashboardSummaryAsync(_currentUser.UserId!.Value);
         return Ok(result);
     }
 
@@ -52,13 +41,7 @@ public class DashboardController : ControllerBase
     [HttpGet("pending-tasks")]
     public async Task<ActionResult<List<PendingTaskDto>>> GetPendingTasks([FromQuery] int limit = 20)
     {
-        var query = new GetPendingTasksQuery
-        {
-            CurrentUserId = _currentUser.UserId!.Value,
-            Limit = limit
-        };
-
-        var result = await _mediator.Send(query);
+        var result = await _dashboardService.GetPendingTasksAsync(_currentUser.UserId!.Value, limit);
         return Ok(result);
     }
 
@@ -68,13 +51,7 @@ public class DashboardController : ControllerBase
     [HttpGet("recent-activities")]
     public async Task<ActionResult<List<RecentActivityDto>>> GetRecentActivities([FromQuery] int limit = 20)
     {
-        var query = new GetRecentActivitiesQuery
-        {
-            CurrentUserId = _currentUser.UserId!.Value,
-            Limit = limit
-        };
-
-        var result = await _mediator.Send(query);
+        var result = await _dashboardService.GetRecentActivitiesAsync(_currentUser.UserId!.Value, limit);
         return Ok(result);
     }
 
@@ -84,12 +61,7 @@ public class DashboardController : ControllerBase
     [HttpGet("statistics")]
     public async Task<ActionResult<PersonalStatisticsDto>> GetStatistics()
     {
-        var query = new GetPersonalStatisticsQuery
-        {
-            CurrentUserId = _currentUser.UserId!.Value
-        };
-
-        var result = await _mediator.Send(query);
+        var result = await _dashboardService.GetPersonalStatisticsAsync(_currentUser.UserId!.Value);
         return Ok(result);
     }
 
@@ -99,50 +71,24 @@ public class DashboardController : ControllerBase
     [HttpGet("projects/stats")]
     public async Task<ActionResult<List<ProjectStatsDto>>> GetProjectsStats()
     {
-        var query = new GetProjectsStatsQuery
-        {
-            CurrentUserId = _currentUser.UserId!.Value
-        };
-
-        var result = await _mediator.Send(query);
+        var result = await _dashboardService.GetProjectsStatsAsync(_currentUser.UserId!.Value);
         return Ok(result);
-    }
-}
-
-/// <summary>
-/// 提交擴展 API（跨計畫查詢）
-/// </summary>
-[ApiController]
-[Route("api/submissions")]
-[Authorize(Policy = Policies.RequireUser)]
-public class SubmissionsExtController : ControllerBase
-{
-    private readonly IMediator _mediator;
-    private readonly ICurrentUserService _currentUser;
-
-    public SubmissionsExtController(IMediator mediator, ICurrentUserService currentUser)
-    {
-        _mediator = mediator;
-        _currentUser = currentUser;
     }
 
     /// <summary>
     /// 取得所有待審核提交（跨計畫）
     /// </summary>
     [HttpGet("pending-review")]
+    [Authorize(Policy = Policies.RequireUser)]
     public async Task<ActionResult<PagedResult<PendingReviewSubmissionDto>>> GetPendingReview(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetPendingReviewSubmissionsQuery
-        {
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin,
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
-
-        var result = await _mediator.Send(query);
+        var result = await _dashboardService.GetPendingReviewSubmissionsAsync(
+            _currentUser.UserId!.Value,
+            _currentUser.IsSystemAdmin,
+            pageNumber,
+            pageSize);
         return Ok(result);
     }
 }

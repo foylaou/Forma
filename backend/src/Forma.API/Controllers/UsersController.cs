@@ -1,17 +1,12 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
-using Forma.Application.Features.Users.Commands.ChangePassword;
-using Forma.Application.Features.Users.Commands.ToggleUserStatus;
-using Forma.Application.Features.Users.Commands.UpdateProfile;
-using Forma.Application.Features.Users.Commands.UpdateUser;
 using Forma.Application.Features.Users.DTOs;
-using Forma.Application.Features.Users.Queries.GetCurrentUser;
-using Forma.Application.Features.Users.Queries.GetUserById;
-using Forma.Application.Features.Users.Queries.GetUsers;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UpdateUserServiceRequest = Forma.Application.Services.UpdateUserRequest;
+using ChangePasswordServiceRequest = Forma.Application.Services.ChangePasswordRequest;
 
 namespace Forma.API.Controllers;
 
@@ -23,12 +18,12 @@ namespace Forma.API.Controllers;
 [Authorize]
 public class UsersController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IUserService _userService;
     private readonly ICurrentUserService _currentUserService;
 
-    public UsersController(IMediator mediator, ICurrentUserService currentUserService)
+    public UsersController(IUserService userService, ICurrentUserService currentUserService)
     {
-        _mediator = mediator;
+        _userService = userService;
         _currentUserService = currentUserService;
     }
 
@@ -48,7 +43,7 @@ public class UsersController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(new GetCurrentUserQuery { UserId = userId.Value });
+            var result = await _userService.GetCurrentUserAsync(userId.Value);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -74,15 +69,14 @@ public class UsersController : ControllerBase
 
         try
         {
-            var command = new UpdateProfileCommand
+            var serviceRequest = new UpdateUserServiceRequest
             {
-                UserId = userId.Value,
                 Department = request.Department,
                 JobTitle = request.JobTitle,
                 PhoneNumber = request.PhoneNumber
             };
 
-            var result = await _mediator.Send(command);
+            var result = await _userService.UpdateUserAsync(userId.Value, serviceRequest);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -108,15 +102,14 @@ public class UsersController : ControllerBase
 
         try
         {
-            var command = new ChangePasswordCommand
+            var serviceRequest = new ChangePasswordServiceRequest
             {
-                UserId = userId.Value,
                 CurrentPassword = request.CurrentPassword,
                 NewPassword = request.NewPassword,
                 ConfirmNewPassword = request.ConfirmNewPassword
             };
 
-            await _mediator.Send(command);
+            await _userService.ChangePasswordAsync(userId.Value, serviceRequest);
             return Ok(new { message = "密碼已成功變更，請重新登入" });
         }
         catch (KeyNotFoundException ex)
@@ -146,7 +139,7 @@ public class UsersController : ControllerBase
         [FromQuery] string? sortBy = null,
         [FromQuery] bool sortDescending = false)
     {
-        var query = new GetUsersQuery
+        var request = new GetUsersRequest
         {
             PageNumber = pageNumber,
             PageSize = pageSize,
@@ -157,7 +150,7 @@ public class UsersController : ControllerBase
             SortDescending = sortDescending
         };
 
-        var result = await _mediator.Send(query);
+        var result = await _userService.GetUsersAsync(request);
         return Ok(result);
     }
 
@@ -174,7 +167,7 @@ public class UsersController : ControllerBase
     {
         try
         {
-            var result = await _mediator.Send(new GetUserByIdQuery { UserId = id });
+            var result = await _userService.GetUserByIdAsync(id);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -197,9 +190,8 @@ public class UsersController : ControllerBase
     {
         try
         {
-            var command = new UpdateUserCommand
+            var serviceRequest = new UpdateUserServiceRequest
             {
-                UserId = id,
                 Username = request.Username,
                 Email = request.Email,
                 SystemRole = request.SystemRole,
@@ -208,7 +200,7 @@ public class UsersController : ControllerBase
                 PhoneNumber = request.PhoneNumber
             };
 
-            var result = await _mediator.Send(command);
+            var result = await _userService.UpdateUserAsync(id, serviceRequest);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -234,7 +226,7 @@ public class UsersController : ControllerBase
     {
         try
         {
-            await _mediator.Send(new ToggleUserStatusCommand { UserId = id, Activate = true });
+            await _userService.ToggleUserStatusAsync(id, activate: true);
             return Ok(new { message = "使用者已啟用" });
         }
         catch (KeyNotFoundException ex)
@@ -256,7 +248,7 @@ public class UsersController : ControllerBase
     {
         try
         {
-            await _mediator.Send(new ToggleUserStatusCommand { UserId = id, Activate = false });
+            await _userService.ToggleUserStatusAsync(id, activate: false);
             return Ok(new { message = "使用者已停用" });
         }
         catch (KeyNotFoundException ex)

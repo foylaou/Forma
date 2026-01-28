@@ -46,6 +46,14 @@ public static class AuthenticationExtensions
 
             options.Events = new JwtBearerEvents
             {
+                OnMessageReceived = context =>
+                {
+                    if (string.IsNullOrEmpty(context.Token))
+                    {
+                        context.Token = context.Request.Cookies["forma_access_token"];
+                    }
+                    return Task.CompletedTask;
+                },
                 OnAuthenticationFailed = context =>
                 {
                     if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))

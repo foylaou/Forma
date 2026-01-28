@@ -1,13 +1,12 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
-using Forma.Application.Features.Exports.Commands.CreateExport;
 using Forma.Application.Features.Exports.DTOs;
-using Forma.Application.Features.Exports.Queries.GetExportById;
+using Forma.Application.Services;
 using Forma.Domain.Enums;
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using CreateExportServiceRequest = Forma.Application.Services.CreateExportRequest;
 
 namespace Forma.API.Controllers;
 
@@ -19,13 +18,13 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class ExportsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IExportService _exportService;
     private readonly ICurrentUserService _currentUser;
     private readonly IApplicationDbContext _context;
 
-    public ExportsController(IMediator mediator, ICurrentUserService currentUser, IApplicationDbContext context)
+    public ExportsController(IExportService exportService, ICurrentUserService currentUser, IApplicationDbContext context)
     {
-        _mediator = mediator;
+        _exportService = exportService;
         _currentUser = currentUser;
         _context = context;
     }
@@ -36,7 +35,7 @@ public class ExportsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ExportDto>> CreateExport([FromBody] CreateExportRequest request)
     {
-        var command = new CreateExportCommand
+        var serviceRequest = new CreateExportServiceRequest
         {
             FormId = request.FormId,
             Format = request.Format ?? "CSV",
@@ -47,7 +46,7 @@ public class ExportsController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _exportService.CreateExportAsync(serviceRequest);
             return CreatedAtAction(nameof(GetExport), new { id = result.Id }, result);
         }
         catch (KeyNotFoundException ex)
@@ -70,16 +69,12 @@ public class ExportsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ExportDto>> GetExport(Guid id)
     {
-        var query = new GetExportByIdQuery
-        {
-            ExportId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _exportService.GetExportByIdAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)

@@ -1,15 +1,13 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
-using Forma.Application.Features.Submissions.Commands.CreateSubmission;
-using Forma.Application.Features.Submissions.Commands.DeleteSubmission;
-using Forma.Application.Features.Submissions.Commands.UpdateSubmission;
 using Forma.Application.Features.Submissions.DTOs;
-using Forma.Application.Features.Submissions.Queries.GetFormSubmissions;
-using Forma.Application.Features.Submissions.Queries.GetSubmissionById;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using CreateSubmissionServiceRequest = Forma.Application.Services.CreateSubmissionRequest;
+using UpdateSubmissionServiceRequest = Forma.Application.Services.UpdateSubmissionRequest;
+using GetFormSubmissionsServiceRequest = Forma.Application.Services.GetFormSubmissionsRequest;
 
 namespace Forma.API.Controllers;
 
@@ -21,12 +19,12 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class SubmissionsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly ISubmissionService _submissionService;
     private readonly ICurrentUserService _currentUser;
 
-    public SubmissionsController(IMediator mediator, ICurrentUserService currentUser)
+    public SubmissionsController(ISubmissionService submissionService, ICurrentUserService currentUser)
     {
-        _mediator = mediator;
+        _submissionService = submissionService;
         _currentUser = currentUser;
     }
 
@@ -36,7 +34,7 @@ public class SubmissionsController : ControllerBase
     [HttpPost("submissions")]
     public async Task<ActionResult<Guid>> CreateSubmission([FromBody] CreateSubmissionRequest request)
     {
-        var command = new CreateSubmissionCommand
+        var serviceRequest = new CreateSubmissionServiceRequest
         {
             FormId = request.FormId,
             SubmissionData = request.SubmissionData,
@@ -47,7 +45,7 @@ public class SubmissionsController : ControllerBase
 
         try
         {
-            var submissionId = await _mediator.Send(command);
+            var submissionId = await _submissionService.CreateSubmissionAsync(serviceRequest);
             return CreatedAtAction(nameof(GetSubmission), new { id = submissionId }, new { id = submissionId });
         }
         catch (KeyNotFoundException ex)
@@ -66,16 +64,12 @@ public class SubmissionsController : ControllerBase
     [HttpGet("submissions/{id:guid}")]
     public async Task<ActionResult<SubmissionDto>> GetSubmission(Guid id)
     {
-        var query = new GetSubmissionByIdQuery
-        {
-            SubmissionId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _submissionService.GetSubmissionByIdAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -100,7 +94,7 @@ public class SubmissionsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetFormSubmissionsQuery
+        var serviceRequest = new GetFormSubmissionsServiceRequest
         {
             FormId = formId,
             CurrentUserId = _currentUser.UserId!.Value,
@@ -114,7 +108,7 @@ public class SubmissionsController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _submissionService.GetFormSubmissionsAsync(serviceRequest);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -133,7 +127,7 @@ public class SubmissionsController : ControllerBase
     [HttpPut("submissions/{id:guid}")]
     public async Task<ActionResult<SubmissionDto>> UpdateSubmission(Guid id, [FromBody] UpdateSubmissionRequest request)
     {
-        var command = new UpdateSubmissionCommand
+        var serviceRequest = new UpdateSubmissionServiceRequest
         {
             SubmissionId = id,
             SubmissionData = request.SubmissionData,
@@ -144,7 +138,7 @@ public class SubmissionsController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _submissionService.UpdateSubmissionAsync(serviceRequest);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -167,16 +161,12 @@ public class SubmissionsController : ControllerBase
     [HttpDelete("submissions/{id:guid}")]
     public async Task<ActionResult> DeleteSubmission(Guid id)
     {
-        var command = new DeleteSubmissionCommand
-        {
-            SubmissionId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            await _mediator.Send(command);
+            await _submissionService.DeleteSubmissionAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return NoContent();
         }
         catch (KeyNotFoundException ex)

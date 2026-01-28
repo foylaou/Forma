@@ -12,7 +12,7 @@ public interface IJwtService
     /// </summary>
     /// <param name="user">使用者</param>
     /// <returns>Access Token</returns>
-    string GenerateAccessToken(User user);
+    string GenerateAccessToken(User user, int? expirationMinutes = null);
 
     /// <summary>
     /// 產生 Refresh Token

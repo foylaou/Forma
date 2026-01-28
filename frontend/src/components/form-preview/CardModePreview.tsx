@@ -1,0 +1,318 @@
+/**
+ * CardModePreview - 卡片模式表單預覽
+ * 一次顯示一個問題，適合手機/平板使用
+ */
+
+import { useState } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  LinearProgress,
+  IconButton,
+} from '@mui/material';
+import {
+  NavigateNext as NextIcon,
+  NavigateBefore as PrevIcon,
+  Check as CheckIcon,
+} from '@mui/icons-material';
+import { useForm, FormProvider } from 'react-hook-form';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FieldRenderer } from '@/components/form-fields';
+import type { FormSchema } from '@/types/form';
+import type { ResolvedTheme } from '@/hooks/useFormTheme';
+
+interface CardModePreviewProps {
+  schema: FormSchema;
+  onSubmit?: (data: Record<string, unknown>) => void;
+  resolvedTheme?: ResolvedTheme;
+}
+
+export function CardModePreview({ schema, onSubmit, resolvedTheme }: CardModePreviewProps) {
+  // Flatten all fields from all pages
+  const allFields = schema.pages.flatMap((page) => page.fields);
+
+  // Filter out non-input fields (panels, html, sections, hidden)
+  const questionFields = allFields.filter(
+    (f) => !['panel', 'paneldynamic', 'html', 'section', 'hidden'].includes(f.type)
+  );
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+
+  const totalQuestions = questionFields.length;
+  const currentField = questionFields[currentIndex];
+  const isFirstQuestion = currentIndex === 0;
+  const isLastQuestion = currentIndex === totalQuestions - 1;
+  const progress = totalQuestions > 0 ? ((currentIndex + 1) / totalQuestions) * 100 : 0;
+
+  const allFieldsRequired = schema.settings?.allFieldsRequired ?? false;
+
+  const methods = useForm({
+    mode: 'onChange',
+  });
+
+  const handleNext = () => {
+    if (isLastQuestion) {
+      // Submit form
+      methods.handleSubmit((data) => {
+        onSubmit?.(data);
+      })();
+    } else {
+      setDirection(1);
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (!isFirstQuestion) {
+      setDirection(-1);
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  // Get current field value to determine if user can proceed
+  const currentValue = methods.watch(currentField?.name);
+  const hasValue = currentValue !== undefined && currentValue !== null && currentValue !== '' &&
+    !(Array.isArray(currentValue) && currentValue.length === 0);
+
+  // Determine if next button should be enabled
+  const isRequired = currentField?.required || allFieldsRequired;
+  const canProceed = !isRequired || hasValue;
+
+  if (totalQuestions === 0) {
+    return (
+      <Box
+        sx={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 4,
+        }}
+      >
+        <Typography color="text.secondary">
+          表單尚無問題
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Animation variants for card transitions
+  const cardVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 300 : -300,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (direction: number) => ({
+      x: direction < 0 ? 300 : -300,
+      opacity: 0,
+    }),
+  };
+
+  return (
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: resolvedTheme?.backgroundColor || schema.settings?.backgroundColor || 'grey.100',
+        position: 'relative',
+      }}
+    >
+      {/* Logo - Top Left */}
+      {(resolvedTheme?.logo || schema.settings?.headerImage) && (
+        <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 10, backgroundColor: resolvedTheme?.logoBackgroundColor, p: 0.5, borderRadius: `${resolvedTheme?.cardBorderRadius ?? 8}px` }}>
+          <Box
+            component="img"
+            src={resolvedTheme?.logo || schema.settings?.headerImage}
+            alt="Logo"
+            sx={{
+              maxWidth: 150,
+              maxHeight: 50,
+              objectFit: 'contain',
+            }}
+          />
+        </Box>
+      )}
+
+      {/* Main Content Area - Centered */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 2,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Progress Bar - Fixed above card */}
+        <Box sx={{ mb: 2, px: 1, width: '100%', maxWidth: 480 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="caption" color="text.secondary">
+              進度
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {currentIndex + 1} / {totalQuestions}
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: 'grey.300',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 3,
+                backgroundColor: 'primary.main',
+                transition: 'transform 0.3s ease',
+              },
+            }}
+          />
+        </Box>
+
+        {/* Card with Animation */}
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={currentIndex}
+            custom={direction}
+            variants={cardVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: 'spring', stiffness: 300, damping: 30 },
+              opacity: { duration: 0.2 },
+            }}
+            style={{
+              width: '100%',
+              maxWidth: 480,
+            }}
+          >
+            <Paper
+              elevation={8}
+              sx={{
+                borderRadius: 3,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {/* Card Content */}
+              <Box
+                sx={{
+                  p: 3,
+                  flex: 1,
+                  overflow: 'auto',
+                  maxHeight: '60vh',
+                }}
+              >
+                {/* Question Label */}
+                <Typography
+                  variant="h6"
+                  fontWeight="bold"
+                  sx={{
+                    mb: 1,
+                    '& b, & strong': { fontWeight: 700 },
+                    '& i, & em': { fontStyle: 'italic' },
+                    '& u': { textDecoration: 'underline' },
+                  }}
+                  dangerouslySetInnerHTML={{ __html: currentField?.label || '' }}
+                />
+
+                {/* Question Description */}
+                {currentField?.description && (
+                  <Typography
+                    variant="body2"
+                    color="primary.main"
+                    sx={{
+                      mb: 3,
+                      '& b, & strong': { fontWeight: 600 },
+                      '& i, & em': { fontStyle: 'italic' },
+                      '& a': { color: 'primary.main' },
+                    }}
+                    dangerouslySetInnerHTML={{ __html: currentField.description }}
+                  />
+                )}
+
+                {/* Field Input */}
+                <FormProvider {...methods}>
+                  <Box sx={{ mt: 2 }}>
+                    <FieldRenderer
+                      field={currentField}
+                      allFieldsRequired={allFieldsRequired}
+                    />
+                  </Box>
+                </FormProvider>
+              </Box>
+
+              {/* Card Footer - Navigation */}
+              <Box
+                sx={{
+                  p: 2,
+                  pt: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                }}
+              >
+                {/* Previous Button */}
+                <IconButton
+                  onClick={handlePrev}
+                  disabled={isFirstQuestion}
+                  sx={{
+                    opacity: isFirstQuestion ? 0 : 1,
+                    transition: 'opacity 0.2s',
+                  }}
+                >
+                  <PrevIcon />
+                </IconButton>
+
+                {/* Next/Submit Button */}
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  disabled={!canProceed}
+                  endIcon={isLastQuestion ? <CheckIcon /> : <NextIcon />}
+                  sx={{
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  {isLastQuestion ? '提交' : '下一題'}
+                </Button>
+              </Box>
+
+              {/* Powered by */}
+              <Box
+                sx={{
+                  py: 1.5,
+                  textAlign: 'center',
+                  borderTop: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                <Typography variant="caption" color="text.disabled">
+                  Powered by <strong>Forma</strong>
+                </Typography>
+              </Box>
+            </Paper>
+          </motion.div>
+        </AnimatePresence>
+      </Box>
+    </Box>
+  );
+}
+
+export default CardModePreview;

@@ -7,6 +7,7 @@ public class ProjectDto
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
+    public string OrganizationName { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
     public string? Description { get; set; }
@@ -22,6 +23,7 @@ public class ProjectDto
     public int MemberCount { get; set; }
     public int FormCount { get; set; }
     public string? CurrentUserRole { get; set; }
+    public string? Settings { get; set; }
 }
 
 /// <summary>

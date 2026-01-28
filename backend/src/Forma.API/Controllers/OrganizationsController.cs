@@ -1,17 +1,14 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
-using Forma.Application.Features.Organizations.Commands.CreateOrganization;
-using Forma.Application.Features.Organizations.Commands.DeleteOrganization;
-using Forma.Application.Features.Organizations.Commands.UpdateOrganization;
 using Forma.Application.Features.Organizations.DTOs;
-using Forma.Application.Features.Organizations.Queries.GetOrganizationById;
-using Forma.Application.Features.Organizations.Queries.GetOrganizations;
 using Forma.Application.Features.Projects.DTOs;
-using Forma.Application.Features.Projects.Queries.GetOrganizationProjects;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using CreateOrganizationServiceRequest = Forma.Application.Services.CreateOrganizationRequest;
+using UpdateOrganizationServiceRequest = Forma.Application.Services.UpdateOrganizationRequest;
+using GetOrganizationsServiceRequest = Forma.Application.Services.GetOrganizationsRequest;
 
 namespace Forma.API.Controllers;
 
@@ -23,12 +20,12 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class OrganizationsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IOrganizationService _organizationService;
     private readonly ICurrentUserService _currentUser;
 
-    public OrganizationsController(IMediator mediator, ICurrentUserService currentUser)
+    public OrganizationsController(IOrganizationService organizationService, ICurrentUserService currentUser)
     {
-        _mediator = mediator;
+        _organizationService = organizationService;
         _currentUser = currentUser;
     }
 
@@ -44,7 +41,7 @@ public class OrganizationsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetOrganizationsQuery
+        var request = new GetOrganizationsServiceRequest
         {
             SearchTerm = searchTerm,
             Type = type,
@@ -54,7 +51,7 @@ public class OrganizationsController : ControllerBase
             PageSize = pageSize
         };
 
-        var result = await _mediator.Send(query);
+        var result = await _organizationService.GetOrganizationsAsync(request);
         return Ok(result);
     }
 
@@ -66,7 +63,7 @@ public class OrganizationsController : ControllerBase
     {
         try
         {
-            var result = await _mediator.Send(new GetOrganizationByIdQuery { OrganizationId = id });
+            var result = await _organizationService.GetOrganizationByIdAsync(id);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -89,7 +86,7 @@ public class OrganizationsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetOrganizationProjectsQuery
+        var request = new GetOrganizationProjectsRequest
         {
             OrganizationId = id,
             CurrentUserId = _currentUser.UserId!.Value,
@@ -105,7 +102,7 @@ public class OrganizationsController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _organizationService.GetOrganizationProjectsAsync(request);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -121,7 +118,7 @@ public class OrganizationsController : ControllerBase
     [Authorize(Policy = Policies.RequireSystemAdmin)]
     public async Task<ActionResult<Guid>> CreateOrganization([FromBody] CreateOrganizationRequest request)
     {
-        var command = new CreateOrganizationCommand
+        var serviceRequest = new CreateOrganizationServiceRequest
         {
             Name = request.Name,
             Code = request.Code,
@@ -131,7 +128,7 @@ public class OrganizationsController : ControllerBase
 
         try
         {
-            var organizationId = await _mediator.Send(command);
+            var organizationId = await _organizationService.CreateOrganizationAsync(serviceRequest);
             return CreatedAtAction(nameof(GetOrganization), new { id = organizationId }, new { id = organizationId });
         }
         catch (InvalidOperationException ex)
@@ -147,9 +144,8 @@ public class OrganizationsController : ControllerBase
     [Authorize(Policy = Policies.RequireSystemAdmin)]
     public async Task<ActionResult<OrganizationDto>> UpdateOrganization(Guid id, [FromBody] UpdateOrganizationRequest request)
     {
-        var command = new UpdateOrganizationCommand
+        var serviceRequest = new UpdateOrganizationServiceRequest
         {
-            OrganizationId = id,
             Name = request.Name,
             Description = request.Description,
             Type = request.Type
@@ -157,7 +153,7 @@ public class OrganizationsController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _organizationService.UpdateOrganizationAsync(id, serviceRequest);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -175,7 +171,7 @@ public class OrganizationsController : ControllerBase
     {
         try
         {
-            await _mediator.Send(new DeleteOrganizationCommand { OrganizationId = id });
+            await _organizationService.DeleteOrganizationAsync(id);
             return NoContent();
         }
         catch (KeyNotFoundException ex)

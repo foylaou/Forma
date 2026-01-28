@@ -29,6 +29,9 @@ public class FormaDbContext : DbContext, IApplicationDbContext
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
+    public DbSet<ActionLog> ActionLogs => Set<ActionLog>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

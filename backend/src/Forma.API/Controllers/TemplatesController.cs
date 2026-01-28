@@ -1,15 +1,13 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
-using Forma.Application.Features.Templates.Commands.CreateTemplate;
-using Forma.Application.Features.Templates.Commands.DeleteTemplate;
-using Forma.Application.Features.Templates.Commands.UpdateTemplate;
 using Forma.Application.Features.Templates.DTOs;
-using Forma.Application.Features.Templates.Queries.GetTemplateById;
-using Forma.Application.Features.Templates.Queries.GetTemplates;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using CreateTemplateServiceRequest = Forma.Application.Services.CreateTemplateRequest;
+using UpdateTemplateServiceRequest = Forma.Application.Services.UpdateTemplateRequest;
+using GetTemplatesServiceRequest = Forma.Application.Services.GetTemplatesRequest;
 
 namespace Forma.API.Controllers;
 
@@ -21,12 +19,12 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class TemplatesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly ITemplateService _templateService;
     private readonly ICurrentUserService _currentUser;
 
-    public TemplatesController(IMediator mediator, ICurrentUserService currentUser)
+    public TemplatesController(ITemplateService templateService, ICurrentUserService currentUser)
     {
-        _mediator = mediator;
+        _templateService = templateService;
         _currentUser = currentUser;
     }
 
@@ -44,7 +42,7 @@ public class TemplatesController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetTemplatesQuery
+        var request = new GetTemplatesServiceRequest
         {
             CurrentUserId = _currentUser.UserId!.Value,
             IsSystemAdmin = _currentUser.IsSystemAdmin,
@@ -58,7 +56,7 @@ public class TemplatesController : ControllerBase
             PageSize = pageSize
         };
 
-        var result = await _mediator.Send(query);
+        var result = await _templateService.GetTemplatesAsync(request);
         return Ok(result);
     }
 
@@ -68,16 +66,12 @@ public class TemplatesController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TemplateDto>> GetTemplate(Guid id)
     {
-        var query = new GetTemplateByIdQuery
-        {
-            TemplateId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _templateService.GetTemplateByIdAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -96,7 +90,7 @@ public class TemplatesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Guid>> CreateTemplate([FromBody] CreateTemplateRequest request)
     {
-        var command = new CreateTemplateCommand
+        var serviceRequest = new CreateTemplateServiceRequest
         {
             Name = request.Name,
             Description = request.Description,
@@ -107,7 +101,7 @@ public class TemplatesController : ControllerBase
             CurrentUserId = _currentUser.UserId!.Value
         };
 
-        var templateId = await _mediator.Send(command);
+        var templateId = await _templateService.CreateTemplateAsync(serviceRequest);
         return CreatedAtAction(nameof(GetTemplate), new { id = templateId }, new { id = templateId });
     }
 
@@ -117,9 +111,8 @@ public class TemplatesController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<TemplateDto>> UpdateTemplate(Guid id, [FromBody] UpdateTemplateRequest request)
     {
-        var command = new UpdateTemplateCommand
+        var serviceRequest = new UpdateTemplateServiceRequest
         {
-            TemplateId = id,
             Name = request.Name,
             Description = request.Description,
             Category = request.Category,
@@ -132,7 +125,7 @@ public class TemplatesController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _templateService.UpdateTemplateAsync(id, serviceRequest);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -151,16 +144,12 @@ public class TemplatesController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult> DeleteTemplate(Guid id)
     {
-        var command = new DeleteTemplateCommand
-        {
-            TemplateId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            await _mediator.Send(command);
+            await _templateService.DeleteTemplateAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
             return NoContent();
         }
         catch (KeyNotFoundException ex)

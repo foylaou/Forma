@@ -12,7 +12,8 @@
 *.userosscache
 *.sln.docstates
 .vs/
-.claude
+.claude/
+.gemini/
 # ---------------------------------
 # Frontend (React/Node.js)
 # ---------------------------------
@@ -41,6 +42,11 @@ backend/**/launchSettings.json
 backend/**/*.db
 backend/**/*.db-shm
 backend/**/*.db-wal
+backend/**/bin\\Debug/
+backend/**/obj\\Debug/
+
+# Always track Migrations
+!backend/src/Forma.Infrastructure/Migrations/
 
 # NuGet
 backend/**/*.nupkg

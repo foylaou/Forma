@@ -1,17 +1,8 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
-using Forma.Application.Features.Forms.Commands.CloneForm;
-using Forma.Application.Features.Forms.Commands.CreateForm;
-using Forma.Application.Features.Forms.Commands.DeleteForm;
-using Forma.Application.Features.Forms.Commands.PublishForm;
-using Forma.Application.Features.Forms.Commands.UnpublishForm;
-using Forma.Application.Features.Forms.Commands.UpdateForm;
 using Forma.Application.Features.Forms.DTOs;
-using Forma.Application.Features.Forms.Queries.GetFormById;
-using Forma.Application.Features.Forms.Queries.GetForms;
-using Forma.Application.Features.Forms.Queries.GetFormVersions;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,12 +16,12 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class FormsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IFormService _formService;
     private readonly ICurrentUserService _currentUser;
 
-    public FormsController(IMediator mediator, ICurrentUserService currentUser)
+    public FormsController(IFormService formService, ICurrentUserService currentUser)
     {
-        _mediator = mediator;
+        _formService = formService;
         _currentUser = currentUser;
     }
 
@@ -46,13 +37,12 @@ public class FormsController : ControllerBase
         [FromQuery] string? sortBy = null,
         [FromQuery] bool sortDescending = false,
         [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var query = new GetFormsQuery
+        var request = new GetFormsRequest
         {
             ProjectId = projectId,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin,
             SearchTerm = searchTerm,
             IsPublished = isPublished,
             IsActive = isActive,
@@ -64,7 +54,11 @@ public class FormsController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _formService.GetFormsAsync(
+                request,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -81,18 +75,15 @@ public class FormsController : ControllerBase
     /// 取得表單詳情
     /// </summary>
     [HttpGet("forms/{id:guid}")]
-    public async Task<ActionResult<FormDto>> GetForm(Guid id)
+    public async Task<ActionResult<FormDto>> GetForm(Guid id, CancellationToken cancellationToken = default)
     {
-        var query = new GetFormByIdQuery
-        {
-            FormId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _formService.GetFormByIdAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -109,23 +100,28 @@ public class FormsController : ControllerBase
     /// 建立表單
     /// </summary>
     [HttpPost("projects/{projectId:guid}/forms")]
-    public async Task<ActionResult<Guid>> CreateForm(Guid projectId, [FromBody] CreateFormRequest request)
+    public async Task<ActionResult<Guid>> CreateForm(
+        Guid projectId,
+        [FromBody] CreateFormApiRequest request,
+        CancellationToken cancellationToken = default)
     {
-        var command = new CreateFormCommand
+        var serviceRequest = new CreateFormRequest
         {
             ProjectId = projectId,
             Name = request.Name,
             Description = request.Description,
             Schema = request.Schema,
             TemplateId = request.TemplateId,
-            AccessControl = request.AccessControl ?? "Private",
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
+            AccessControl = request.AccessControl ?? "Private"
         };
 
         try
         {
-            var formId = await _mediator.Send(command);
+            var formId = await _formService.CreateFormAsync(
+                serviceRequest,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return CreatedAtAction(nameof(GetForm), new { id = formId }, new { id = formId });
         }
         catch (KeyNotFoundException ex)
@@ -142,23 +138,28 @@ public class FormsController : ControllerBase
     /// 更新表單
     /// </summary>
     [HttpPut("forms/{id:guid}")]
-    public async Task<ActionResult<FormDto>> UpdateForm(Guid id, [FromBody] UpdateFormRequest request)
+    public async Task<ActionResult<FormDto>> UpdateForm(
+        Guid id,
+        [FromBody] UpdateFormApiRequest request,
+        CancellationToken cancellationToken = default)
     {
-        var command = new UpdateFormCommand
+        var serviceRequest = new UpdateFormRequest
         {
-            FormId = id,
             Name = request.Name,
             Description = request.Description,
             Schema = request.Schema,
             AccessControl = request.AccessControl,
-            IsActive = request.IsActive,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
+            IsActive = request.IsActive
         };
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _formService.UpdateFormAsync(
+                id,
+                serviceRequest,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -175,18 +176,15 @@ public class FormsController : ControllerBase
     /// 刪除表單
     /// </summary>
     [HttpDelete("forms/{id:guid}")]
-    public async Task<ActionResult> DeleteForm(Guid id)
+    public async Task<ActionResult> DeleteForm(Guid id, CancellationToken cancellationToken = default)
     {
-        var command = new DeleteFormCommand
-        {
-            FormId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            await _mediator.Send(command);
+            await _formService.DeleteFormAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -207,18 +205,15 @@ public class FormsController : ControllerBase
     /// 發布表單
     /// </summary>
     [HttpPost("forms/{id:guid}/publish")]
-    public async Task<ActionResult<FormDto>> PublishForm(Guid id)
+    public async Task<ActionResult<FormDto>> PublishForm(Guid id, CancellationToken cancellationToken = default)
     {
-        var command = new PublishFormCommand
-        {
-            FormId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _formService.PublishFormAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -239,18 +234,15 @@ public class FormsController : ControllerBase
     /// 下架表單
     /// </summary>
     [HttpPost("forms/{id:guid}/unpublish")]
-    public async Task<ActionResult<FormDto>> UnpublishForm(Guid id)
+    public async Task<ActionResult<FormDto>> UnpublishForm(Guid id, CancellationToken cancellationToken = default)
     {
-        var command = new UnpublishFormCommand
-        {
-            FormId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _formService.UnpublishFormAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -271,20 +263,25 @@ public class FormsController : ControllerBase
     /// 複製表單
     /// </summary>
     [HttpPost("forms/{id:guid}/clone")]
-    public async Task<ActionResult<Guid>> CloneForm(Guid id, [FromBody] CloneFormRequest? request = null)
+    public async Task<ActionResult<Guid>> CloneForm(
+        Guid id,
+        [FromBody] CloneFormApiRequest? request = null,
+        CancellationToken cancellationToken = default)
     {
-        var command = new CloneFormCommand
+        var serviceRequest = new CloneFormRequest
         {
             FormId = id,
             TargetProjectId = request?.TargetProjectId,
-            NewName = request?.NewName,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
+            NewName = request?.NewName
         };
 
         try
         {
-            var newFormId = await _mediator.Send(command);
+            var newFormId = await _formService.CloneFormAsync(
+                serviceRequest,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return CreatedAtAction(nameof(GetForm), new { id = newFormId }, new { id = newFormId });
         }
         catch (KeyNotFoundException ex)
@@ -301,18 +298,17 @@ public class FormsController : ControllerBase
     /// 取得表單版本歷史
     /// </summary>
     [HttpGet("forms/{id:guid}/versions")]
-    public async Task<ActionResult<List<FormVersionDto>>> GetFormVersions(Guid id)
+    public async Task<ActionResult<List<FormVersionDto>>> GetFormVersions(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
-        var query = new GetFormVersionsQuery
-        {
-            FormId = id,
-            CurrentUserId = _currentUser.UserId!.Value,
-            IsSystemAdmin = _currentUser.IsSystemAdmin
-        };
-
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _formService.GetFormVersionsAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -328,7 +324,7 @@ public class FormsController : ControllerBase
 
 #region Request DTOs
 
-public class CreateFormRequest
+public class CreateFormApiRequest
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
@@ -337,7 +333,7 @@ public class CreateFormRequest
     public string? AccessControl { get; set; }
 }
 
-public class UpdateFormRequest
+public class UpdateFormApiRequest
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
@@ -346,7 +342,7 @@ public class UpdateFormRequest
     public bool? IsActive { get; set; }
 }
 
-public class CloneFormRequest
+public class CloneFormApiRequest
 {
     public Guid? TargetProjectId { get; set; }
     public string? NewName { get; set; }

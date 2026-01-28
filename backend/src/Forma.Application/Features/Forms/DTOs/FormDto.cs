@@ -22,6 +22,7 @@ public class FormDto
     public string Version { get; set; } = "1.0";
     public string AccessControl { get; set; } = string.Empty;
     public int SubmissionCount { get; set; }
+    public string? ProjectSettings { get; set; }
     public bool CanEdit { get; set; }
     public bool CanDelete { get; set; }
 }

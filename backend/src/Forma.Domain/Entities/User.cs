@@ -60,4 +60,5 @@ public class User : AuditableEntity
     public virtual ICollection<FormTemplate> CreatedTemplates { get; set; } = new List<FormTemplate>();
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public virtual ICollection<UploadedFile> UploadedFiles { get; set; } = new List<UploadedFile>();
 }

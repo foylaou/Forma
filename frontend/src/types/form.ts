@@ -159,9 +159,27 @@ export interface ClassicModeSettings {
 export interface DisplayModeSettings {
   default?: FormDisplayMode;
   allowUserSwitch?: boolean;
+  /** 卡片模式在所有裝置一致顯示（含桌面），預設 false 表示僅在平板/手機使用卡片模式 */
+  forceCardOnDesktop?: boolean;
   cardMode?: CardModeSettings;
   classicMode?: ClassicModeSettings;
 }
+
+/** 文字樣式設定 */
+export interface TextStyleSettings {
+  fontFamily?: string;
+  fontSize?: number;
+  color?: string;
+}
+
+/** 可用字型 */
+export type FontFamily =
+  | 'default'
+  | 'Noto Sans TC'
+  | 'Noto Serif TC'
+  | 'Microsoft JhengHei'
+  | 'Arial'
+  | 'Times New Roman';
 
 /** 表單設定 */
 export interface FormSettings {
@@ -172,9 +190,34 @@ export interface FormSettings {
   enableAutoSave?: boolean;
   autoSaveInterval?: number;
   displayMode?: DisplayModeSettings;
+  /** 所有欄位設為必填 */
+  allFieldsRequired?: boolean;
+  /** 隨機顯示問題順序 */
+  shuffleQuestions?: boolean;
+  /** 啟用自訂樣式（覆寫計畫主題） */
+  useCustomTheme?: boolean;
+  /** 表單背景顏色 */
+  backgroundColor?: string;
+  /** 表單首頁圖片 */
+  headerImage?: string;
+  /** 頁首文字樣式 */
+  headerStyle?: TextStyleSettings;
+  /** 問題文字樣式 */
+  questionStyle?: TextStyleSettings;
+  /** 說明文字樣式 */
+  descriptionStyle?: TextStyleSettings;
 }
 
 /** 表單頁面 */
+/** 頁面導航規則 */
+export interface PageNavigationRule {
+  id: string;
+  fieldName: string;
+  operator: ConditionalOperator;
+  value: string | number | boolean;
+  targetPageId: string;
+}
+
 export interface FormPage {
   id: string;
   title?: string;
@@ -182,6 +225,10 @@ export interface FormPage {
   fields: Field[];
   /** 強制此頁面使用特定顯示模式 */
   forceDisplayMode?: 'card' | 'classic';
+  /** 是否允許返回上一頁 */
+  allowPrevious?: boolean;
+  /** 條件導航規則 */
+  navigationRules?: PageNavigationRule[];
 }
 
 /** 表單主題 */
@@ -200,6 +247,13 @@ export interface FieldLayout {
   order?: number;
 }
 
+/** 欄位圖片設定 */
+export interface FieldImage {
+  url: string;
+  alignment?: 'left' | 'center' | 'right';
+  alt?: string;
+}
+
 /** 基礎欄位定義 */
 export interface BaseField {
   id: string;
@@ -216,6 +270,8 @@ export interface BaseField {
   validation?: FieldValidation;
   conditional?: Conditional;
   layout?: FieldLayout;
+  /** 欄位附加圖片 */
+  image?: FieldImage;
 }
 
 // ============================================================================
@@ -365,6 +421,14 @@ export interface MatrixFieldProperties {
   columns: MatrixColumn[];
   alternateRows?: boolean;
   showHeader?: boolean;
+  /** 是否允許填寫其他 */
+  allowOther?: boolean;
+  /** 其他選項標籤 */
+  otherLabel?: string;
+  /** 是否加入「無」選項 */
+  noneOption?: boolean;
+  /** 無選項標籤 */
+  noneLabel?: string;
   /** 響應式顯示策略 */
   responsiveMode?: ResponsiveModeSettings;
 }

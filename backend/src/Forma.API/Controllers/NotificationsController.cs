@@ -1,18 +1,13 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
-using Forma.Application.Features.Notifications.Commands.DeleteNotification;
-using Forma.Application.Features.Notifications.Commands.MarkAllAsRead;
-using Forma.Application.Features.Notifications.Commands.MarkAsRead;
-using Forma.Application.Features.Notifications.Commands.SendTestEmail;
-using Forma.Application.Features.Notifications.Commands.UpdatePreferences;
 using Forma.Application.Features.Notifications.DTOs;
-using Forma.Application.Features.Notifications.Queries.GetNotifications;
-using Forma.Application.Features.Notifications.Queries.GetPreferences;
-using Forma.Application.Features.Notifications.Queries.GetUnreadCount;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UpdatePreferencesServiceRequest = Forma.Application.Services.UpdatePreferencesRequest;
+using GetNotificationsServiceRequest = Forma.Application.Services.GetNotificationsRequest;
+using SendTestEmailServiceRequest = Forma.Application.Services.SendTestEmailRequest;
 
 namespace Forma.API.Controllers;
 
@@ -24,12 +19,12 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class NotificationsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly INotificationService _notificationService;
     private readonly ICurrentUserService _currentUser;
 
-    public NotificationsController(IMediator mediator, ICurrentUserService currentUser)
+    public NotificationsController(INotificationService notificationService, ICurrentUserService currentUser)
     {
-        _mediator = mediator;
+        _notificationService = notificationService;
         _currentUser = currentUser;
     }
 
@@ -42,7 +37,7 @@ public class NotificationsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
-        var query = new GetNotificationsQuery
+        var request = new GetNotificationsServiceRequest
         {
             CurrentUserId = _currentUser.UserId!.Value,
             IsRead = isRead,
@@ -50,7 +45,7 @@ public class NotificationsController : ControllerBase
             PageSize = pageSize
         };
 
-        var result = await _mediator.Send(query);
+        var result = await _notificationService.GetNotificationsAsync(request);
         return Ok(result);
     }
 
@@ -60,12 +55,7 @@ public class NotificationsController : ControllerBase
     [HttpGet("unread-count")]
     public async Task<ActionResult<UnreadCountDto>> GetUnreadCount()
     {
-        var query = new GetUnreadCountQuery
-        {
-            CurrentUserId = _currentUser.UserId!.Value
-        };
-
-        var result = await _mediator.Send(query);
+        var result = await _notificationService.GetUnreadCountAsync(_currentUser.UserId!.Value);
         return Ok(result);
     }
 
@@ -75,15 +65,9 @@ public class NotificationsController : ControllerBase
     [HttpPut("{id:guid}/read")]
     public async Task<ActionResult> MarkAsRead(Guid id)
     {
-        var command = new MarkAsReadCommand
-        {
-            NotificationId = id,
-            CurrentUserId = _currentUser.UserId!.Value
-        };
-
         try
         {
-            await _mediator.Send(command);
+            await _notificationService.MarkAsReadAsync(id, _currentUser.UserId!.Value);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -98,12 +82,7 @@ public class NotificationsController : ControllerBase
     [HttpPut("read-all")]
     public async Task<ActionResult<int>> MarkAllAsRead()
     {
-        var command = new MarkAllAsReadCommand
-        {
-            CurrentUserId = _currentUser.UserId!.Value
-        };
-
-        var count = await _mediator.Send(command);
+        var count = await _notificationService.MarkAllAsReadAsync(_currentUser.UserId!.Value);
         return Ok(new { markedCount = count });
     }
 
@@ -113,15 +92,9 @@ public class NotificationsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult> DeleteNotification(Guid id)
     {
-        var command = new DeleteNotificationCommand
-        {
-            NotificationId = id,
-            CurrentUserId = _currentUser.UserId!.Value
-        };
-
         try
         {
-            await _mediator.Send(command);
+            await _notificationService.DeleteNotificationAsync(id, _currentUser.UserId!.Value);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -136,12 +109,7 @@ public class NotificationsController : ControllerBase
     [HttpGet("preferences")]
     public async Task<ActionResult<NotificationPreferenceDto>> GetPreferences()
     {
-        var query = new GetPreferencesQuery
-        {
-            CurrentUserId = _currentUser.UserId!.Value
-        };
-
-        var result = await _mediator.Send(query);
+        var result = await _notificationService.GetPreferencesAsync(_currentUser.UserId!.Value);
         return Ok(result);
     }
 
@@ -151,7 +119,7 @@ public class NotificationsController : ControllerBase
     [HttpPut("preferences")]
     public async Task<ActionResult<NotificationPreferenceDto>> UpdatePreferences([FromBody] UpdatePreferencesRequest request)
     {
-        var command = new UpdatePreferencesCommand
+        var serviceRequest = new UpdatePreferencesServiceRequest
         {
             CurrentUserId = _currentUser.UserId!.Value,
             EmailEnabled = request.EmailEnabled,
@@ -164,7 +132,7 @@ public class NotificationsController : ControllerBase
             DailyDigestEmail = request.DailyDigestEmail
         };
 
-        var result = await _mediator.Send(command);
+        var result = await _notificationService.UpdatePreferencesAsync(serviceRequest);
         return Ok(result);
     }
 
@@ -175,7 +143,7 @@ public class NotificationsController : ControllerBase
     [Authorize(Policy = Policies.RequireSystemAdmin)]
     public async Task<ActionResult> SendTestEmail([FromBody] SendTestEmailRequest? request = null)
     {
-        var command = new SendTestEmailCommand
+        var serviceRequest = new SendTestEmailServiceRequest
         {
             CurrentUserId = _currentUser.UserId!.Value,
             IsSystemAdmin = _currentUser.IsSystemAdmin,
@@ -184,7 +152,7 @@ public class NotificationsController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(command);
+            var result = await _notificationService.SendTestEmailAsync(serviceRequest);
             return Ok(new { success = result, message = "測試郵件已發送（模擬）" });
         }
         catch (UnauthorizedAccessException)

@@ -53,6 +53,11 @@ public class Project : AuditableEntity
     public ProjectStatus Status { get; set; } = ProjectStatus.Draft;
 
     /// <summary>
+    /// 計畫設定 (JSON 格式，存放主題等設定)
+    /// </summary>
+    public string? Settings { get; set; }
+
+    /// <summary>
     /// 建立者 ID
     /// </summary>
     public Guid CreatedById { get; set; }

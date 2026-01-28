@@ -16,8 +16,9 @@
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
 
-    <!-- CQRS / Mediator -->
-    <PackageReference Include="MediatR" Version="14.0.0" />
+    <!-- ASP.NET Core abstractions for IFormFile -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+
   </ItemGroup>
 
   <PropertyGroup>

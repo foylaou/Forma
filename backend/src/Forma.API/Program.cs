@@ -1,6 +1,11 @@
 using Forma.API.Extensions;
+using Forma.API.Middleware;
 using Forma.Application;
+using Forma.Application.Features.SystemSettings.DTOs;
+using Forma.Application.Services;
 using Forma.Infrastructure;
+using Forma.Infrastructure.Data;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,14 +25,15 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithJwt();
 
-// CORS
+// CORS - 使用動態來源
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? ["http://localhost:3000"])
+        var configOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+        var origins = configOrigins ?? ["http://localhost:3000"];
+
+        policy.WithOrigins(origins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -35,6 +41,31 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// 種子資料初始化
+await DataSeeder.SeedAsync(app.Services);
+
+// 動態設定 Forwarded Headers (根據 CORS 設定)
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var settingService = scope.ServiceProvider.GetRequiredService<ISystemSettingService>();
+        var corsSettings = await settingService.GetSettingAsync<CorsSettingsDto>("Cors");
+
+        if (corsSettings.TrustProxyHeaders)
+        {
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
+        }
+    }
+    catch
+    {
+        // 使用預設值
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -49,9 +80,12 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
+// Security Headers
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+app.Run("http://localhost:5053");

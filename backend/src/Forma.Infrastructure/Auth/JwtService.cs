@@ -36,7 +36,7 @@ public class JwtService : IJwtService
     }
 
     /// <inheritdoc />
-    public string GenerateAccessToken(User user)
+    public string GenerateAccessToken(User user, int? expirationMinutes = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -55,7 +55,7 @@ public class JwtService : IJwtService
             issuer: _settings.Issuer,
             audience: _settings.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_settings.AccessTokenExpirationMinutes),
+            expires: DateTime.UtcNow.AddMinutes(expirationMinutes ?? _settings.AccessTokenExpirationMinutes),
             signingCredentials: credentials
         );
 

@@ -1,8 +1,7 @@
 using Forma.Application.Common.Authorization;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Features.Reports.DTOs;
-using Forma.Application.Features.Reports.Queries.GetFormReport;
-using MediatR;
+using Forma.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,12 +15,12 @@ namespace Forma.API.Controllers;
 [Authorize(Policy = Policies.RequireUser)]
 public class ReportsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IReportService _reportService;
     private readonly ICurrentUserService _currentUser;
 
-    public ReportsController(IMediator mediator, ICurrentUserService currentUser)
+    public ReportsController(IReportService reportService, ICurrentUserService currentUser)
     {
-        _mediator = mediator;
+        _reportService = reportService;
         _currentUser = currentUser;
     }
 
@@ -34,7 +33,7 @@ public class ReportsController : ControllerBase
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
     {
-        var query = new GetFormReportQuery
+        var request = new GetFormReportRequest
         {
             FormId = formId,
             StartDate = startDate,
@@ -45,7 +44,7 @@ public class ReportsController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(query);
+            var result = await _reportService.GetFormReportAsync(request);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)

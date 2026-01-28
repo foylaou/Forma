@@ -1,5 +1,6 @@
 using System.Reflection;
 using FluentValidation;
+using Forma.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Forma.Application;
@@ -22,11 +23,21 @@ public static class DependencyInjection
         // FluentValidation
         services.AddValidatorsFromAssembly(assembly);
 
-        // MediatR
-        services.AddMediatR(cfg =>
-        {
-            cfg.RegisterServicesFromAssembly(assembly);
-        });
+        // Application Services
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IExportService, ExportService>();
+        services.AddScoped<IFormService, FormService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IOrganizationService, OrganizationService>();
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IProjectService, ProjectService>();
+        services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<ISubmissionService, SubmissionService>();
+        services.AddScoped<ITemplateService, TemplateService>();
+        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IFileManagementService, FileManagementService>();
+        services.AddScoped<ISystemSettingService, SystemSettingService>();
 
         return services;
     }
