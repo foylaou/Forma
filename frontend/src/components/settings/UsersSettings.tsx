@@ -42,22 +42,13 @@ import {
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { usersApi } from '@/lib/api/users';
+import { rolesApi } from '@/lib/api/roles';
 import type {
   UserListDto,
   UserProfileDto,
   UpdateUserRequest,
 } from '@/types/api/users';
-
-// 系統角色對應
-const systemRoles: Record<string, { label: string; color: 'error' | 'warning' | 'info' | 'default' }> = {
-  SystemAdmin: { label: '系統管理員', color: 'error' },
-  Auditor: { label: '稽核人員', color: 'warning' },
-  User: { label: '一般使用者', color: 'info' },
-};
-
-function getRoleInfo(role: string) {
-  return systemRoles[role] || { label: role, color: 'default' as const };
-}
+import type { RoleDto } from '@/types/api/roles';
 
 // 編輯使用者對話框
 interface UserDialogProps {
@@ -65,9 +56,10 @@ interface UserDialogProps {
   onClose: () => void;
   onSaved: () => void;
   user: UserProfileDto | null;
+  roles: RoleDto[];
 }
 
-function UserDialog({ open, onClose, onSaved, user }: UserDialogProps) {
+function UserDialog({ open, onClose, onSaved, user, roles }: UserDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +67,7 @@ function UserDialog({ open, onClose, onSaved, user }: UserDialogProps) {
     defaultValues: {
       username: '',
       email: '',
-      systemRole: 'User',
+      roleId: '',
       department: '',
       jobTitle: '',
       phoneNumber: '',
@@ -87,7 +79,7 @@ function UserDialog({ open, onClose, onSaved, user }: UserDialogProps) {
       reset({
         username: user.username,
         email: user.email,
-        systemRole: user.systemRole,
+        roleId: user.roleId || '',
         department: user.department || '',
         jobTitle: user.jobTitle || '',
         phoneNumber: user.phoneNumber || '',
@@ -160,15 +152,16 @@ function UserDialog({ open, onClose, onSaved, user }: UserDialogProps) {
           />
 
           <Controller
-            name="systemRole"
+            name="roleId"
             control={control}
             render={({ field }) => (
               <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>系統角色</InputLabel>
-                <Select {...field} label="系統角色">
-                  <MenuItem value="User">一般使用者</MenuItem>
-                  <MenuItem value="Auditor">稽核人員</MenuItem>
-                  <MenuItem value="SystemAdmin">系統管理員</MenuItem>
+                <InputLabel>角色</InputLabel>
+                <Select {...field} label="角色">
+                  <MenuItem value="">無</MenuItem>
+                  {roles.map((r) => (
+                    <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             )}
@@ -234,16 +227,20 @@ export function UsersSettings() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<boolean | ''>('');
   const [showFilters, setShowFilters] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfileDto | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [roles, setRoles] = useState<RoleDto[]>([]);
+
+  useEffect(() => {
+    rolesApi.getAll().then(setRoles).catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadUsers();
-  }, [page, rowsPerPage, roleFilter, activeFilter]);
+  }, [page, rowsPerPage, activeFilter]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -253,7 +250,6 @@ export function UsersSettings() {
         pageNumber: page + 1,
         pageSize: rowsPerPage,
         searchTerm: searchTerm || undefined,
-        systemRole: roleFilter || undefined,
         isActive: activeFilter === '' ? undefined : activeFilter,
       });
       setUsers(response.items || []);
@@ -359,19 +355,6 @@ export function UsersSettings() {
       {/* Filter Options */}
       {showFilters && (
         <Box sx={{ display: 'flex', gap: 2, mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>系統角色</InputLabel>
-            <Select
-              value={roleFilter}
-              onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}
-              label="系統角色"
-            >
-              <MenuItem value="">全部</MenuItem>
-              <MenuItem value="SystemAdmin">系統管理員</MenuItem>
-              <MenuItem value="Auditor">稽核人員</MenuItem>
-              <MenuItem value="User">一般使用者</MenuItem>
-            </Select>
-          </FormControl>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>狀態</InputLabel>
             <Select
@@ -402,7 +385,7 @@ export function UsersSettings() {
             <TableRow>
               <TableCell>使用者名稱</TableCell>
               <TableCell>電子郵件</TableCell>
-              <TableCell>系統角色</TableCell>
+              <TableCell>角色</TableCell>
               <TableCell>部門</TableCell>
               <TableCell>狀態</TableCell>
               <TableCell>最後登入</TableCell>
@@ -426,14 +409,12 @@ export function UsersSettings() {
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary">
-                    {searchTerm || roleFilter || activeFilter !== '' ? '找不到符合條件的使用者' : '尚無使用者'}
+                    {searchTerm || activeFilter !== '' ? '找不到符合條件的使用者' : '尚無使用者'}
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user) => {
-                const roleInfo = getRoleInfo(user.systemRole);
-                return (
+              users.map((user) => (
                   <TableRow key={user.id} hover>
                     <TableCell>
                       <Typography fontWeight="medium">{user.username}</Typography>
@@ -442,7 +423,9 @@ export function UsersSettings() {
                       <Typography variant="body2" color="text.secondary">{user.email}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={roleInfo.label} size="small" color={roleInfo.color} />
+                      <Typography variant="body2" color="text.secondary">
+                        {user.roleName || '-'}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">
@@ -482,8 +465,7 @@ export function UsersSettings() {
                       </Tooltip>
                     </TableCell>
                   </TableRow>
-                );
-              })
+              ))
             )}
           </TableBody>
         </Table>
@@ -507,6 +489,7 @@ export function UsersSettings() {
         onClose={() => { setDialogOpen(false); setEditingUser(null); }}
         onSaved={loadUsers}
         user={editingUser}
+        roles={roles}
       />
     </Box>
   );

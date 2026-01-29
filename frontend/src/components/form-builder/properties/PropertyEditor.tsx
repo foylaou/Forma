@@ -2,9 +2,11 @@
  * PropertyEditor - Right panel for editing selected field or page properties
  */
 
-import { Box, Paper, Typography, Chip, Button } from '@mui/material';
+import { useState } from 'react';
+import { Box, Paper, Typography, Chip, Button, Menu, MenuItem } from '@mui/material';
 import * as Icons from '@mui/icons-material';
 import { useFormBuilderStore, useSelectedField, useSelectedPage } from '@/stores/formBuilderStore';
+import { TemplateSaveDialog } from '../templates/TemplateSaveDialog';
 import { getFieldTypeDefinition } from '../toolbox/fieldTypeDefinitions';
 
 // Property Sections
@@ -19,9 +21,15 @@ import { NumberProperties } from './type-specific/NumberProperties';
 import { SelectProperties } from './type-specific/SelectProperties';
 import { RatingProperties } from './type-specific/RatingProperties';
 import { PanelProperties } from './type-specific/PanelProperties';
+import { PanelDynamicProperties } from './type-specific/PanelDynamicProperties';
 import { ExpressionProperties } from './type-specific/ExpressionProperties';
 import { MatrixProperties } from './type-specific/MatrixProperties';
 import { ImagePickerProperties } from './type-specific/ImagePickerProperties';
+import { CascadingSelectProperties } from './type-specific/CascadingSelectProperties';
+import { HtmlProperties } from './type-specific/HtmlProperties';
+import { WelcomeProperties } from './type-specific/WelcomeProperties';
+import { EndingProperties } from './type-specific/EndingProperties';
+import { DownloadReportProperties } from './type-specific/DownloadReportProperties';
 
 // Page Properties
 import { PageProperties } from './PageProperties';
@@ -30,6 +38,9 @@ export function PropertyEditor() {
   const { deleteField, duplicateField } = useFormBuilderStore();
   const field = useSelectedField();
   const page = useSelectedPage();
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [overwriteTemplateOpen, setOverwriteTemplateOpen] = useState(false);
+  const [templateMenuAnchor, setTemplateMenuAnchor] = useState<null | HTMLElement>(null);
 
   // Show page properties if a page is selected
   if (page) {
@@ -188,8 +199,14 @@ export function PropertyEditor() {
         <ImagePickerProperties />
         <RatingProperties />
         <PanelProperties />
+        <PanelDynamicProperties />
         <ExpressionProperties />
         <MatrixProperties />
+        <CascadingSelectProperties />
+        <HtmlProperties />
+        <WelcomeProperties />
+        <EndingProperties />
+        <DownloadReportProperties />
 
         {/* Layout Properties */}
         <LayoutProperties />
@@ -217,6 +234,36 @@ export function PropertyEditor() {
         >
           複製
         </Button>
+        <Box sx={{ flex: 1, display: 'flex' }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Icons.SaveAlt />}
+            onClick={() => setSaveTemplateOpen(true)}
+            sx={{ flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+          >
+            存為範本
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={(e) => setTemplateMenuAnchor(e.currentTarget)}
+            sx={{ minWidth: 0, px: 0.5, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: 0 }}
+          >
+            <Icons.ArrowDropUp fontSize="small" />
+          </Button>
+          <Menu
+            anchorEl={templateMenuAnchor}
+            open={Boolean(templateMenuAnchor)}
+            onClose={() => setTemplateMenuAnchor(null)}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <MenuItem onClick={() => { setTemplateMenuAnchor(null); setOverwriteTemplateOpen(true); }}>
+              覆蓋範本
+            </MenuItem>
+          </Menu>
+        </Box>
         <Button
           variant="outlined"
           size="small"
@@ -228,6 +275,20 @@ export function PropertyEditor() {
           刪除
         </Button>
       </Box>
+
+      <TemplateSaveDialog
+        open={saveTemplateOpen}
+        onClose={() => setSaveTemplateOpen(false)}
+        mode="field"
+        data={field}
+      />
+      <TemplateSaveDialog
+        open={overwriteTemplateOpen}
+        onClose={() => setOverwriteTemplateOpen(false)}
+        mode="field"
+        data={field}
+        saveMode="overwrite"
+      />
     </Paper>
   );
 }

@@ -32,6 +32,10 @@ public class FormaDbContext : DbContext, IApplicationDbContext
     public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
     public DbSet<ActionLog> ActionLogs => Set<ActionLog>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<FidoCredential> FidoCredentials => Set<FidoCredential>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

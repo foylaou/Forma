@@ -35,6 +35,7 @@ export type FieldType =
   | 'boolean'
   | 'imagepicker'
   | 'ranking'
+  | 'cascadingselect'
   // 矩陣類
   | 'matrix'
   | 'matrixdropdown'
@@ -50,7 +51,11 @@ export type FieldType =
   // 特殊類
   | 'hidden'
   | 'expression'
-  | 'paneldynamic';
+  | 'paneldynamic'
+  // 顯示專用類
+  | 'welcome'
+  | 'ending'
+  | 'downloadreport';
 
 /** 版面寬度 */
 export type LayoutWidth = 'full' | 'half' | 'third' | 'quarter' | 'auto';
@@ -507,6 +512,45 @@ export interface HtmlFieldProperties {
   content: string;
 }
 
+/** 階層式選項節點 */
+export interface CascadingOption {
+  value: string;
+  label: string;
+  children?: CascadingOption[];
+}
+
+/** 階層式選單欄位屬性 */
+export interface CascadingSelectFieldProperties {
+  levels: { label: string; placeholder?: string }[];
+  options: CascadingOption[];
+}
+
+/** 歡迎欄位屬性 */
+export interface WelcomeFieldProperties {
+  title?: string;
+  subtitle?: string;
+  imageUrl?: string;
+  alignment?: 'left' | 'center' | 'right';
+}
+
+/** 結束欄位屬性 */
+export interface EndingFieldProperties {
+  title?: string;
+  message?: string;
+  imageUrl?: string;
+  alignment?: 'left' | 'center' | 'right';
+}
+
+/** 下載報告欄位屬性 */
+export interface DownloadReportFieldProperties {
+  coverTitle?: string;
+  showDate?: boolean;
+  dateLabel?: string;
+  buttonText?: string;
+  excludeFieldTypes?: string[];
+  showLogo?: boolean;
+}
+
 /** 欄位屬性聯合類型 */
 export type FieldProperties =
   | TextFieldProperties
@@ -526,7 +570,11 @@ export type FieldProperties =
   | ExpressionFieldProperties
   | PanelFieldProperties
   | PanelDynamicFieldProperties
-  | HtmlFieldProperties;
+  | HtmlFieldProperties
+  | CascadingSelectFieldProperties
+  | WelcomeFieldProperties
+  | EndingFieldProperties
+  | DownloadReportFieldProperties;
 
 // ============================================================================
 // 具體欄位類型定義
@@ -626,8 +674,28 @@ export interface HtmlField extends BaseField {
   properties: HtmlFieldProperties;
 }
 
+export interface CascadingSelectField extends BaseField {
+  type: 'cascadingselect';
+  properties?: CascadingSelectFieldProperties;
+}
+
 export interface HiddenField extends BaseField {
   type: 'hidden';
+}
+
+export interface WelcomeField extends BaseField {
+  type: 'welcome';
+  properties?: WelcomeFieldProperties;
+}
+
+export interface EndingField extends BaseField {
+  type: 'ending';
+  properties?: EndingFieldProperties;
+}
+
+export interface DownloadReportField extends BaseField {
+  type: 'downloadreport';
+  properties?: DownloadReportFieldProperties;
 }
 
 /** 欄位聯合類型 */
@@ -651,7 +719,11 @@ export type Field =
   | PanelDynamicField
   | SectionField
   | HtmlField
-  | HiddenField;
+  | CascadingSelectField
+  | HiddenField
+  | WelcomeField
+  | EndingField
+  | DownloadReportField;
 
 // ============================================================================
 // 動態選項來源
@@ -783,6 +855,8 @@ export type GetFieldProperties<T extends FieldType> = T extends 'text' | 'textar
   ? PanelDynamicFieldProperties
   : T extends 'html'
   ? HtmlFieldProperties
+  : T extends 'cascadingselect'
+  ? CascadingSelectFieldProperties
   : never;
 
 /** 判斷條件是否為多條件類型 */

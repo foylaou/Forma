@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Forma.Application.Common.Interfaces;
+using Forma.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 
 namespace Forma.Infrastructure.Services;
@@ -44,18 +45,24 @@ public class CurrentUserService : ICurrentUserService
     public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 
     /// <inheritdoc />
-    public IEnumerable<string> Roles
+    public long Permissions
     {
         get
         {
-            var roles = _httpContextAccessor.HttpContext?.User?.FindAll(ClaimTypes.Role);
-            return roles?.Select(r => r.Value) ?? Enumerable.Empty<string>();
+            var permClaim = _httpContextAccessor.HttpContext?.User?.FindFirst("permissions");
+            if (permClaim != null && long.TryParse(permClaim.Value, out var perms))
+                return perms;
+            return 0;
         }
     }
 
     /// <inheritdoc />
-    public string? SystemRole => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value;
-
-    /// <inheritdoc />
-    public bool IsSystemAdmin => SystemRole == "SystemAdmin";
+    public bool IsSystemAdmin
+    {
+        get
+        {
+            const long adminPerms = (long)UserPermission.ManageUsers | (long)UserPermission.ManageRoles | (long)UserPermission.ManageSettings;
+            return (Permissions & adminPerms) == adminPerms;
+        }
+    }
 }

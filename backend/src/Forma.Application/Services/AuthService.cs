@@ -18,26 +18,29 @@ public class AuthService : IAuthService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtSettings _jwtSettings;
     private readonly ISystemSettingService _systemSettingService;
+    private readonly IPasswordPolicyService _passwordPolicyService;
 
     public AuthService(
         IApplicationDbContext context,
         IJwtService jwtService,
         IPasswordHasher passwordHasher,
         IJwtSettings jwtSettings,
-        ISystemSettingService systemSettingService)
+        ISystemSettingService systemSettingService,
+        IPasswordPolicyService passwordPolicyService)
     {
         _context = context;
         _jwtService = jwtService;
         _passwordHasher = passwordHasher;
         _jwtSettings = jwtSettings;
         _systemSettingService = systemSettingService;
+        _passwordPolicyService = passwordPolicyService;
     }
 
     /// <inheritdoc />
     public async Task<SystemStatusDto> GetSystemStatusAsync(CancellationToken cancellationToken = default)
     {
         var hasAdmin = await _context.Users
-            .AnyAsync(u => u.SystemRole == SystemRole.SystemAdmin && u.IsActive, cancellationToken);
+            .AnyAsync(u => u.Role != null && u.Role.PermissionValue == (long)UserPermission.All && u.IsActive, cancellationToken);
 
         return new SystemStatusDto
         {
@@ -51,7 +54,7 @@ public class AuthService : IAuthService
     {
         // 檢查是否已有系統管理員
         var hasAdmin = await _context.Users
-            .AnyAsync(u => u.SystemRole == SystemRole.SystemAdmin, cancellationToken);
+            .AnyAsync(u => u.Role != null && u.Role.PermissionValue == (long)UserPermission.All, cancellationToken);
 
         if (hasAdmin)
         {
@@ -76,13 +79,36 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("此電子郵件已被使用");
         }
 
+        // 密碼策略驗證
+        var (isValid, errors) = await _passwordPolicyService.ValidatePasswordAsync(request.Password, cancellationToken);
+        if (!isValid)
+        {
+            throw new InvalidOperationException(string.Join("；", errors));
+        }
+
+        // 建立或取得系統管理員角色
+        var adminRole = await _context.Roles
+            .FirstOrDefaultAsync(r => r.PermissionValue == (long)UserPermission.All, cancellationToken);
+
+        if (adminRole == null)
+        {
+            adminRole = new Role
+            {
+                Name = "系統管理員",
+                Description = "擁有所有系統權限",
+                PermissionValue = (long)UserPermission.All,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Roles.Add(adminRole);
+        }
+
         // 建立系統管理員
         var user = new User
         {
             Username = request.Username,
             Email = request.Email,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
-            SystemRole = SystemRole.SystemAdmin,
+            RoleId = adminRole.Id,
             Department = request.Department ?? "系統管理",
             JobTitle = request.JobTitle ?? "系統管理員",
             IsActive = true,
@@ -102,6 +128,7 @@ public class AuthService : IAuthService
     {
         // 尋找使用者 (支援電子郵件或使用者名稱)
         var user = await _context.Users
+            .Include(u => u.Role)
             .FirstOrDefaultAsync(u =>
                 u.Email == request.EmailOrUsername ||
                 u.Username == request.EmailOrUsername,
@@ -154,13 +181,19 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("此電子郵件已被使用");
         }
 
+        // 密碼策略驗證
+        var (isValid, errors) = await _passwordPolicyService.ValidatePasswordAsync(request.Password, cancellationToken);
+        if (!isValid)
+        {
+            throw new InvalidOperationException(string.Join("；", errors));
+        }
+
         // 建立使用者
         var user = new User
         {
             Username = request.Username,
             Email = request.Email,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
-            SystemRole = SystemRole.User,
             Department = request.Department,
             JobTitle = request.JobTitle,
             IsActive = true,
@@ -181,6 +214,7 @@ public class AuthService : IAuthService
         // 尋找 Refresh Token
         var existingToken = await _context.RefreshTokens
             .Include(rt => rt.User)
+            .ThenInclude(u => u.Role)
             .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken, cancellationToken);
 
         if (existingToken == null)
@@ -310,6 +344,7 @@ public class AuthService : IAuthService
     public async Task<ProfileDto> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var user = await _context.Users
+            .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
         if (user == null)
@@ -324,6 +359,7 @@ public class AuthService : IAuthService
     public async Task<ProfileDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken = default)
     {
         var user = await _context.Users
+            .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
         if (user == null)
@@ -409,7 +445,8 @@ public class AuthService : IAuthService
         Id = user.Id,
         Username = user.Username,
         Email = user.Email,
-        SystemRole = user.SystemRole.ToString(),
+        RoleName = user.Role?.Name,
+        Permissions = user.Role?.PermissionValue ?? 0,
         Department = user.Department,
         JobTitle = user.JobTitle,
         IsActive = user.IsActive
@@ -420,7 +457,8 @@ public class AuthService : IAuthService
         Id = user.Id,
         Username = user.Username,
         Email = user.Email,
-        SystemRole = user.SystemRole.ToString(),
+        RoleName = user.Role?.Name,
+        Permissions = user.Role?.PermissionValue ?? 0,
         Department = user.Department,
         JobTitle = user.JobTitle,
         PhoneNumber = user.PhoneNumber,

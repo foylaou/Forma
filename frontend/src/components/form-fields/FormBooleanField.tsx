@@ -34,6 +34,11 @@ export function FormBooleanField({ field }: FormBooleanFieldProps) {
       name={name}
       control={control}
       defaultValue={field.defaultValue ?? false}
+      rules={{
+        validate: required
+          ? (value) => value === true || '此欄位為必填'
+          : undefined,
+      }}
       render={({ field: controllerField, fieldState: { error } }) => {
         // Radio 樣式
         if (displayStyle === 'radio') {

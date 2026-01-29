@@ -156,6 +156,7 @@ export function FormTextField({ field }: FormTextFieldProps) {
         name={name}
         control={control}
         defaultValue={field.defaultValue ?? ''}
+        rules={{ required: required ? '此欄位為必填' : false }}
         render={({ field: controllerField, fieldState: { error } }) => (
           <MuiTextField
             {...controllerField}

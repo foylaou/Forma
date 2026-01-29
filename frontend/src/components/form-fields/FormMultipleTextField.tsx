@@ -23,6 +23,14 @@ export function FormMultipleTextField({ field }: FormMultipleTextFieldProps) {
       name={name}
       control={control}
       defaultValue={{}}
+      rules={{
+        validate: required
+          ? (value) => {
+              const vals = value || {};
+              return Object.values(vals).some((v) => v !== '' && v !== undefined && v !== null) || '此欄位為必填';
+            }
+          : undefined,
+      }}
       render={({ field: controllerField, fieldState: { error } }) => {
         const values = controllerField.value || {};
 

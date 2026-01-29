@@ -10,6 +10,7 @@ import type {
   CaptchaSettingsDto,
   SecurityHeadersSettingsDto,
   CorsSettingsDto,
+  Fido2SettingsDto,
 } from '@/types/api';
 
 export const settingsApi = {
@@ -58,6 +59,13 @@ export const settingsApi = {
 
   updateSecurityHeadersSettings: (data: SecurityHeadersSettingsDto) =>
     apiClient.put<{ message: string }>('/settings/security-headers', data),
+
+  // FIDO2 設定
+  getFido2Settings: () =>
+    apiClient.get<Fido2SettingsDto>('/settings/fido2'),
+
+  updateFido2Settings: (data: Fido2SettingsDto) =>
+    apiClient.put<{ message: string }>('/settings/fido2', data),
 
   // CORS 設定
   getCorsSettings: () =>

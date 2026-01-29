@@ -18,8 +18,11 @@ import {
   DragIndicator as DragIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  SaveAlt as SaveTemplateIcon,
+  ArrowDropUp as ArrowDropUpIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
+import { TemplateSaveDialog } from '../templates/TemplateSaveDialog';
 import { useDroppable } from '@dnd-kit/core';
 import { DroppableCanvas } from './DroppableCanvas';
 import { useFormBuilderStore, useActivePageFields } from '@/stores/formBuilderStore';
@@ -45,6 +48,8 @@ interface DroppablePageTabProps {
   onDelete: (e: React.MouseEvent) => void;
   onMoveLeft: (e: React.MouseEvent) => void;
   onMoveRight: (e: React.MouseEvent) => void;
+  onSaveAsTemplate: (e: React.MouseEvent) => void;
+  onOverwriteTemplate: (e: React.MouseEvent) => void;
   canDelete: boolean;
 }
 
@@ -64,6 +69,8 @@ function DroppablePageTab({
   onDelete,
   onMoveLeft,
   onMoveRight,
+  onSaveAsTemplate,
+  onOverwriteTemplate,
   canDelete,
 }: DroppablePageTabProps) {
   const { isOver, setNodeRef } = useDroppable({
@@ -174,6 +181,24 @@ function DroppablePageTab({
                   <SettingsIcon sx={{ fontSize: 14 }} />
                 </IconButton>
               </Tooltip>
+              <Tooltip title="存為頁面範本">
+                <IconButton
+                  size="small"
+                  onClick={onSaveAsTemplate}
+                  sx={{ p: 0.25 }}
+                >
+                  <SaveTemplateIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="覆蓋頁面範本">
+                <IconButton
+                  size="small"
+                  onClick={onOverwriteTemplate}
+                  sx={{ p: 0.25 }}
+                >
+                  <ArrowDropUpIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
               {canDelete && (
                 <IconButton
                   size="small"
@@ -230,6 +255,11 @@ export function FormCanvas({ projectTheme }: FormCanvasProps = {}) {
   const [editingTitle, setEditingTitle] = useState('');
   const [editingFormTitle, setEditingFormTitle] = useState(false);
   const [editingFormDescription, setEditingFormDescription] = useState(false);
+  const [savePageTemplateId, setSavePageTemplateId] = useState<string | null>(null);
+  const [overwritePageTemplateId, setOverwritePageTemplateId] = useState<string | null>(null);
+
+  const pageForTemplate = savePageTemplateId ? schema.pages.find((p) => p.id === savePageTemplateId) : null;
+  const pageForOverwrite = overwritePageTemplateId ? schema.pages.find((p) => p.id === overwritePageTemplateId) : null;
 
   const handleAddPage = () => {
     addPage();
@@ -457,6 +487,8 @@ export function FormCanvas({ projectTheme }: FormCanvasProps = {}) {
               onDelete={(e) => handleDeletePage(page.id, e)}
               onMoveLeft={(e) => handleMovePageLeft(page.id, index, e)}
               onMoveRight={(e) => handleMovePageRight(page.id, index, e)}
+              onSaveAsTemplate={(e) => { e.stopPropagation(); setSavePageTemplateId(page.id); }}
+              onOverwriteTemplate={(e) => { e.stopPropagation(); setOverwritePageTemplateId(page.id); }}
               canDelete={schema.pages.length > 1}
             />
           ))}
@@ -488,6 +520,21 @@ export function FormCanvas({ projectTheme }: FormCanvasProps = {}) {
           <DroppableCanvas fields={fields} />
         </Box>
       </Box>
+      {/* Save Page as Template Dialog */}
+      <TemplateSaveDialog
+        open={!!savePageTemplateId}
+        onClose={() => setSavePageTemplateId(null)}
+        mode="page"
+        data={pageForTemplate}
+      />
+      {/* Overwrite Page Template Dialog */}
+      <TemplateSaveDialog
+        open={!!overwritePageTemplateId}
+        onClose={() => setOverwritePageTemplateId(null)}
+        mode="page"
+        data={pageForOverwrite}
+        saveMode="overwrite"
+      />
     </Paper>
   );
 }

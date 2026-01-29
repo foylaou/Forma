@@ -99,6 +99,20 @@ export interface SecurityHeadersSettingsDto {
   cspFrameAncestors: string;
 }
 
+// FIDO2 設定
+export interface Fido2SettingsDto {
+  enableFido2: boolean;
+}
+
+// FIDO2 憑證資訊
+export interface Fido2CredentialInfo {
+  id: string;
+  deviceName?: string;
+  aaGuid?: string;
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
 // CORS 設定
 export interface CorsSettingsDto {
   trustProxyHeaders: boolean;

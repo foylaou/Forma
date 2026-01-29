@@ -33,9 +33,9 @@ export function CardModePreview({ schema, onSubmit, resolvedTheme }: CardModePre
   // Flatten all fields from all pages
   const allFields = schema.pages.flatMap((page) => page.fields);
 
-  // Filter out non-input fields (panels, html, sections, hidden)
+  // Filter out non-renderable fields (panels, sections, hidden)
   const questionFields = allFields.filter(
-    (f) => !['panel', 'paneldynamic', 'html', 'section', 'hidden'].includes(f.type)
+    (f) => !['panel', 'paneldynamic', 'section', 'hidden', 'downloadreport'].includes(f.type)
   );
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -215,43 +215,55 @@ export function CardModePreview({ schema, onSubmit, resolvedTheme }: CardModePre
                   maxHeight: '60vh',
                 }}
               >
-                {/* Question Label */}
-                <Typography
-                  variant="h6"
-                  fontWeight="bold"
-                  sx={{
-                    mb: 1,
-                    '& b, & strong': { fontWeight: 700 },
-                    '& i, & em': { fontStyle: 'italic' },
-                    '& u': { textDecoration: 'underline' },
-                  }}
-                  dangerouslySetInnerHTML={{ __html: currentField?.label || '' }}
-                />
-
-                {/* Question Description */}
-                {currentField?.description && (
-                  <Typography
-                    variant="body2"
-                    color="primary.main"
-                    sx={{
-                      mb: 3,
-                      '& b, & strong': { fontWeight: 600 },
-                      '& i, & em': { fontStyle: 'italic' },
-                      '& a': { color: 'primary.main' },
-                    }}
-                    dangerouslySetInnerHTML={{ __html: currentField.description }}
-                  />
-                )}
-
-                {/* Field Input */}
-                <FormProvider {...methods}>
-                  <Box sx={{ mt: 2 }}>
+                {/* Display-only fields render their own content */}
+                {currentField && ['welcome', 'ending', 'html'].includes(currentField.type) ? (
+                  <FormProvider {...methods}>
                     <FieldRenderer
                       field={currentField}
                       allFieldsRequired={allFieldsRequired}
                     />
-                  </Box>
-                </FormProvider>
+                  </FormProvider>
+                ) : (
+                  <>
+                    {/* Question Label */}
+                    <Typography
+                      variant="h6"
+                      fontWeight="bold"
+                      sx={{
+                        mb: 1,
+                        '& b, & strong': { fontWeight: 700 },
+                        '& i, & em': { fontStyle: 'italic' },
+                        '& u': { textDecoration: 'underline' },
+                      }}
+                      dangerouslySetInnerHTML={{ __html: currentField?.label || '' }}
+                    />
+
+                    {/* Question Description */}
+                    {currentField?.description && (
+                      <Typography
+                        variant="body2"
+                        color="primary.main"
+                        sx={{
+                          mb: 3,
+                          '& b, & strong': { fontWeight: 600 },
+                          '& i, & em': { fontStyle: 'italic' },
+                          '& a': { color: 'primary.main' },
+                        }}
+                        dangerouslySetInnerHTML={{ __html: currentField.description }}
+                      />
+                    )}
+
+                    {/* Field Input */}
+                    <FormProvider {...methods}>
+                      <Box sx={{ mt: 2 }}>
+                        <FieldRenderer
+                          field={currentField}
+                          allFieldsRequired={allFieldsRequired}
+                        />
+                      </Box>
+                    </FormProvider>
+                  </>
+                )}
               </Box>
 
               {/* Card Footer - Navigation */}

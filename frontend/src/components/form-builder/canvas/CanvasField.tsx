@@ -814,9 +814,17 @@ export function CanvasField({
       case 'html':
         return (
           <Box sx={previewStyles.container}>
-            <Box sx={{ color: 'text.disabled', fontSize: '0.9rem' }}>
-              HTML 內容區塊
-            </Box>
+            <Box
+              sx={{
+                color: 'text.secondary',
+                fontSize: '0.85rem',
+                maxHeight: 80,
+                overflow: 'hidden',
+                opacity: 0.7,
+                '& *': { margin: 0, padding: 0 },
+              }}
+              dangerouslySetInnerHTML={{ __html: (field as any).properties?.content || '<p style="color:#999">HTML 內容區塊</p>' }}
+            />
           </Box>
         );
 

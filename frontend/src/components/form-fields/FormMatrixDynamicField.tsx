@@ -61,6 +61,11 @@ export function FormMatrixDynamicField({ field }: FormMatrixDynamicFieldProps) {
       name={name}
       control={control}
       defaultValue={[]}
+      rules={{
+        validate: required
+          ? (value) => (Array.isArray(value) && value.length > 0) || '此欄位為必填'
+          : undefined,
+      }}
       render={({ field: controllerField, fieldState: { error } }) => {
         const rows: RowData[] = controllerField.value || [];
 

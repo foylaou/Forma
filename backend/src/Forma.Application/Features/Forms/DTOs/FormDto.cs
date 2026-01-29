@@ -25,6 +25,9 @@ public class FormDto
     public string? ProjectSettings { get; set; }
     public bool CanEdit { get; set; }
     public bool CanDelete { get; set; }
+    public bool IsLocked { get; set; }
+    public string? LockedByUsername { get; set; }
+    public DateTime? LockedAt { get; set; }
 }
 
 /// <summary>
@@ -43,6 +46,9 @@ public class FormListDto
     public DateTime CreatedAt { get; set; }
     public string CreatedByUsername { get; set; } = string.Empty;
     public int SubmissionCount { get; set; }
+    public bool IsLocked { get; set; }
+    public string? LockedByUsername { get; set; }
+    public DateTime? LockedAt { get; set; }
 }
 
 /// <summary>

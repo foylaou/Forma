@@ -114,7 +114,23 @@ function TemplateCard({ template, onEdit, onDelete, onView }: TemplateCardProps)
         )}
 
         {template.category && (
-          <Chip label={template.category} size="small" variant="outlined" sx={{ mt: 1 }} />
+          <Chip
+            label={
+              template.category === 'form' ? '表單' :
+              template.category === 'page' ? '頁面' :
+              template.category === 'field' ? '欄位' :
+              template.category
+            }
+            size="small"
+            variant="outlined"
+            color={
+              template.category === 'form' ? 'primary' :
+              template.category === 'page' ? 'secondary' :
+              template.category === 'field' ? 'info' :
+              'default'
+            }
+            sx={{ mt: 1 }}
+          />
         )}
 
         <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
@@ -388,6 +404,7 @@ export function TemplatesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateDto | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<TemplateDto | null>(null);
@@ -407,6 +424,7 @@ export function TemplatesPage() {
         pageNumber: currentPage,
         pageSize,
         searchTerm: searchTerm || undefined,
+        category: categoryFilter || undefined,
       };
       const response = await templatesApi.getTemplates(params);
       setTemplates(response.items || []);
@@ -416,7 +434,7 @@ export function TemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, categoryFilter]);
 
   useEffect(() => {
     loadTemplates();
@@ -502,6 +520,22 @@ export function TemplatesPage() {
               ),
             }}
           />
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {[
+              { value: '', label: '全部' },
+              { value: 'form', label: '表單' },
+              { value: 'page', label: '頁面' },
+              { value: 'field', label: '欄位' },
+            ].map((cat) => (
+              <Chip
+                key={cat.value}
+                label={cat.label}
+                variant={categoryFilter === cat.value ? 'filled' : 'outlined'}
+                color={categoryFilter === cat.value ? 'primary' : 'default'}
+                onClick={() => { setCategoryFilter(cat.value); setCurrentPage(1); }}
+              />
+            ))}
+          </Box>
         </Box>
       </Box>
 

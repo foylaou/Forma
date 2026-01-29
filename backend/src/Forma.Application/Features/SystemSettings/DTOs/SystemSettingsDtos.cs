@@ -376,6 +376,17 @@ public class SecurityHeadersSettingsDto
 }
 
 /// <summary>
+/// FIDO2 設定
+/// </summary>
+public class Fido2SettingsDto
+{
+    /// <summary>
+    /// 是否啟用 FIDO2 / Passkey
+    /// </summary>
+    public bool EnableFido2 { get; set; } = false;
+}
+
+/// <summary>
 /// CORS 設定
 /// </summary>
 public class CorsSettingsDto

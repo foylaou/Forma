@@ -31,6 +31,9 @@ public static class DataSeeder
             // 種子預設組織
             await SeedOrganizationsAsync(context, logger);
 
+            // 種子系統管理員角色
+            await SeedRolesAsync(context, logger);
+
             await context.SaveChangesAsync();
         }
         catch (Exception ex)
@@ -61,5 +64,35 @@ public static class DataSeeder
 
         context.Organizations.Add(defaultOrg);
         logger.LogInformation("預設組織已建立: {Name} ({Code})", defaultOrg.Name, defaultOrg.Code);
+    }
+
+    private static async Task SeedRolesAsync(FormaDbContext context, ILogger logger)
+    {
+        var adminRole = await context.Roles
+            .FirstOrDefaultAsync(r => r.Name == "系統管理員");
+
+        if (adminRole != null)
+        {
+            // 確保既有角色擁有全部權限
+            if (adminRole.PermissionValue != (long)UserPermission.All)
+            {
+                adminRole.PermissionValue = (long)UserPermission.All;
+                logger.LogInformation("已更新系統管理員角色權限");
+            }
+            return;
+        }
+
+        logger.LogInformation("建立系統管理員角色...");
+
+        adminRole = new Role
+        {
+            Name = "系統管理員",
+            Description = "擁有所有系統權限",
+            PermissionValue = (long)UserPermission.All,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        context.Roles.Add(adminRole);
+        logger.LogInformation("系統管理員角色已建立");
     }
 }

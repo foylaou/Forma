@@ -26,14 +26,9 @@ public interface ICurrentUserService
     bool IsAuthenticated { get; }
 
     /// <summary>
-    /// 當前使用者角色
+    /// 當前使用者權限值
     /// </summary>
-    IEnumerable<string> Roles { get; }
-
-    /// <summary>
-    /// 當前使用者系統角色
-    /// </summary>
-    string? SystemRole { get; }
+    long Permissions { get; }
 
     /// <summary>
     /// 是否為系統管理員

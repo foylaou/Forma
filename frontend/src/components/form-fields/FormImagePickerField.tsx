@@ -34,6 +34,14 @@ export function FormImagePickerField({ field }: FormImagePickerFieldProps) {
       name={name}
       control={control}
       defaultValue={multiSelect ? [] : ''}
+      rules={{
+        validate: required
+          ? (value) => {
+              if (multiSelect) return (Array.isArray(value) && value.length > 0) || '此欄位為必填';
+              return (value !== '' && value !== undefined && value !== null) || '此欄位為必填';
+            }
+          : undefined,
+      }}
       render={({ field: controllerField, fieldState: { error } }) => {
         const selectedValues = multiSelect
           ? (controllerField.value as string[]) || []

@@ -134,7 +134,6 @@ public class UsersController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] string? searchTerm = null,
-        [FromQuery] string? systemRole = null,
         [FromQuery] bool? isActive = null,
         [FromQuery] string? sortBy = null,
         [FromQuery] bool sortDescending = false)
@@ -144,7 +143,6 @@ public class UsersController : ControllerBase
             PageNumber = pageNumber,
             PageSize = pageSize,
             SearchTerm = searchTerm,
-            SystemRole = systemRole,
             IsActive = isActive,
             SortBy = sortBy,
             SortDescending = sortDescending
@@ -194,7 +192,7 @@ public class UsersController : ControllerBase
             {
                 Username = request.Username,
                 Email = request.Email,
-                SystemRole = request.SystemRole,
+                RoleId = request.RoleId,
                 Department = request.Department,
                 JobTitle = request.JobTitle,
                 PhoneNumber = request.PhoneNumber
@@ -318,9 +316,9 @@ public class UpdateUserRequest
     public string? Email { get; set; }
 
     /// <summary>
-    /// 系統角色
+    /// 自訂角色 ID
     /// </summary>
-    public string? SystemRole { get; set; }
+    public Guid? RoleId { get; set; }
 
     /// <summary>
     /// 部門

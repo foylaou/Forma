@@ -3,6 +3,7 @@ using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
 using Forma.Application.Features.Forms.DTOs;
 using Forma.Application.Services;
+using Forma.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,6 +25,9 @@ public class FormsController : ControllerBase
         _formService = formService;
         _currentUser = currentUser;
     }
+
+    private bool HasLockPermission =>
+        (_currentUser.Permissions & (long)UserPermission.LockUnlockForms) == (long)UserPermission.LockUnlockForms;
 
     /// <summary>
     /// 取得專案的表單列表
@@ -159,6 +163,7 @@ public class FormsController : ControllerBase
                 serviceRequest,
                 _currentUser.UserId!.Value,
                 _currentUser.IsSystemAdmin,
+                HasLockPermission,
                 cancellationToken);
             return Ok(result);
         }
@@ -184,6 +189,7 @@ public class FormsController : ControllerBase
                 id,
                 _currentUser.UserId!.Value,
                 _currentUser.IsSystemAdmin,
+                HasLockPermission,
                 cancellationToken);
             return NoContent();
         }
@@ -213,6 +219,7 @@ public class FormsController : ControllerBase
                 id,
                 _currentUser.UserId!.Value,
                 _currentUser.IsSystemAdmin,
+                HasLockPermission,
                 cancellationToken);
             return Ok(result);
         }
@@ -242,6 +249,7 @@ public class FormsController : ControllerBase
                 id,
                 _currentUser.UserId!.Value,
                 _currentUser.IsSystemAdmin,
+                HasLockPermission,
                 cancellationToken);
             return Ok(result);
         }
@@ -318,6 +326,65 @@ public class FormsController : ControllerBase
         catch (UnauthorizedAccessException)
         {
             return Forbid();
+        }
+    }
+    /// <summary>
+    /// 鎖定表單
+    /// </summary>
+    [HttpPost("forms/{id:guid}/lock")]
+    public async Task<ActionResult<FormDto>> LockForm(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _formService.LockFormAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                HasLockPermission,
+                cancellationToken);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// 解鎖表單
+    /// </summary>
+    [HttpPost("forms/{id:guid}/unlock")]
+    public async Task<ActionResult<FormDto>> UnlockForm(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _formService.UnlockFormAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin,
+                HasLockPermission,
+                cancellationToken);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 }

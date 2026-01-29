@@ -251,7 +251,7 @@ export function FormSubmitContent({
   const isFirstPage = currentPageIndex === 0;
   const isLastPage = currentPageIndex === totalPages - 1;
   const allFields = schema.pages.flatMap((page) => page.fields);
-  const inputFields = allFields.filter(f => !['panel', 'paneldynamic', 'html', 'section', 'hidden'].includes(f.type));
+  const inputFields = allFields.filter(f => !['panel', 'paneldynamic', 'html', 'section', 'hidden', 'welcome', 'ending', 'downloadreport'].includes(f.type));
   const showProgressBar = (schema.settings?.showProgressBar ?? true) && !resolvedTheme.hideProgressBar;
   const allFieldsRequired = schema.settings?.allFieldsRequired ?? false;
   const canGoPrevious = !isFirstPage && (currentPage?.allowPrevious ?? true);
@@ -263,7 +263,16 @@ export function FormSubmitContent({
     }
   };
 
-  const handleNextPage = () => {
+  const handleNextPage = async () => {
+    // Validate current page fields before navigating
+    const currentFieldNames = currentPage?.fields
+      .filter(f => !['panel', 'paneldynamic', 'html', 'section', 'hidden', 'welcome', 'ending', 'downloadreport'].includes(f.type))
+      .map(f => f.name) ?? [];
+    if (currentFieldNames.length > 0) {
+      const valid = await methods.trigger(currentFieldNames);
+      if (!valid) return;
+    }
+
     const formValues = methods.watch();
     const findTargetPageIndex = (rules: PageNavigationRule[] | undefined): number | null => {
       if (!rules || rules.length === 0) return null;
@@ -423,7 +432,7 @@ export function FormSubmitContent({
 
                   {currentPage.fields.map((field) => (
                     <Box key={field.id} sx={{ mb: 3 }}>
-                      <FieldRenderer field={field} allFieldsRequired={allFieldsRequired} />
+                      <FieldRenderer field={field} allFieldsRequired={allFieldsRequired} schema={schema} logoUrl={resolvedTheme.logo} />
                     </Box>
                   ))}
                 </Box>

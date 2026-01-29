@@ -33,9 +33,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.PhoneNumber)
             .HasMaxLength(20);
 
-        builder.Property(u => u.SystemRole)
-            .HasConversion<string>()
-            .HasMaxLength(20);
+        // Role FK
+        builder.HasOne(u => u.Role)
+            .WithMany()
+            .HasForeignKey(u => u.RoleId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(u => u.RoleId);
 
         // Indexes
         builder.HasIndex(u => u.Username).IsUnique();

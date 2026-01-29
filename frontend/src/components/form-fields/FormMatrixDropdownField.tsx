@@ -47,6 +47,14 @@ export function FormMatrixDropdownField({ field }: FormMatrixDropdownFieldProps)
       name={name}
       control={control}
       defaultValue={{}}
+      rules={{
+        validate: required
+          ? (value) => {
+              const vals = value || {};
+              return (Object.keys(vals).length > 0) || '此欄位為必填';
+            }
+          : undefined,
+      }}
       render={({ field: controllerField, fieldState: { error } }) => {
         const values = controllerField.value || {};
 

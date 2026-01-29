@@ -77,11 +77,6 @@ public class GetUsersRequest
     public string? SearchTerm { get; set; }
 
     /// <summary>
-    /// 篩選系統角色
-    /// </summary>
-    public string? SystemRole { get; set; }
-
-    /// <summary>
     /// 篩選啟用狀態
     /// </summary>
     public bool? IsActive { get; set; }
@@ -113,9 +108,9 @@ public class UpdateUserRequest
     public string? Email { get; set; }
 
     /// <summary>
-    /// 系統角色
+    /// 自訂角色 ID
     /// </summary>
-    public string? SystemRole { get; set; }
+    public Guid? RoleId { get; set; }
 
     /// <summary>
     /// 部門

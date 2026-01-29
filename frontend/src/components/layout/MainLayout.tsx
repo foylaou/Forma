@@ -34,7 +34,6 @@ import {
   Add as AddIcon,
   ListAlt as ListIcon,
   Assessment as ReportsIcon,
-  Settings as SettingsIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Folder as ProjectIcon,
@@ -43,6 +42,7 @@ import {
   ContentCopy as TemplateIcon,
   Business as OrgIcon,
   FolderOpen as AllProjectsIcon,
+  AdminPanelSettings as SystemSettingsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserMenu } from '@/components/auth';
@@ -64,7 +64,7 @@ export function MainLayout({ children, title }: MainLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
-  const isAdmin = user?.systemRole === 'SystemAdmin';
+  const isAdmin = user ? (BigInt(user.permissions ?? 0) & 7n) === 7n : false;
 
   const {
     selectedYear,
@@ -520,29 +520,31 @@ export function MainLayout({ children, title }: MainLayoutProps) {
 
       <Divider />
 
-      {/* Settings */}
-      <List sx={{ px: 1 }}>
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => handleNavClick('/settings')}
-            selected={location.pathname.startsWith('/settings')}
-            sx={{
-              borderRadius: 2,
-              '&.Mui-selected': {
-                backgroundColor: 'primary.main',
-                color: 'white',
-                '&:hover': { backgroundColor: 'primary.dark' },
-                '& .MuiListItemIcon-root': { color: 'white' },
-              },
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <SettingsIcon />
-            </ListItemIcon>
-            <ListItemText primary="設定" />
-          </ListItemButton>
-        </ListItem>
-      </List>
+      {/* System Settings (admin only) */}
+      {isAdmin && (
+        <List sx={{ px: 1 }}>
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => handleNavClick('/system-settings')}
+              selected={location.pathname.startsWith('/system-settings')}
+              sx={{
+                borderRadius: 2,
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  '&:hover': { backgroundColor: 'primary.dark' },
+                  '& .MuiListItemIcon-root': { color: 'white' },
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 40 }}>
+                <SystemSettingsIcon />
+              </ListItemIcon>
+              <ListItemText primary="系統設定" />
+            </ListItemButton>
+          </ListItem>
+        </List>
+      )}
     </Box>
   );
 

@@ -222,6 +222,18 @@ export const fieldTypeDefinitions: FieldTypeDefinition[] = [
     },
   },
 
+  {
+    type: 'cascadingselect',
+    label: '階層選單',
+    icon: 'AccountTree',
+    category: 'choice',
+    description: '多層級聯動下拉選單（如縣市→鄉鎮）',
+    defaultProperties: {
+      levels: [{ label: '第1層' }, { label: '第2層' }],
+      options: [],
+    },
+  },
+
   // 日期時間類
   {
     type: 'date',
@@ -364,6 +376,30 @@ export const fieldTypeDefinitions: FieldTypeDefinition[] = [
     defaultProperties: { content: '<p>在此輸入 HTML 內容</p>' },
   },
   {
+    type: 'welcome',
+    label: '歡迎區塊',
+    icon: 'Celebration',
+    category: 'layout',
+    description: '表單開頭的歡迎說明區塊',
+    defaultProperties: {
+      title: '歡迎填寫本問卷',
+      subtitle: '',
+      alignment: 'center',
+    },
+  },
+  {
+    type: 'ending',
+    label: '結束區塊',
+    icon: 'CheckCircleOutline',
+    category: 'layout',
+    description: '表單結尾的結語區塊',
+    defaultProperties: {
+      title: '感謝您的填寫',
+      message: '您的回覆已記錄。',
+      alignment: 'center',
+    },
+  },
+  {
     type: 'paneldynamic',
     label: '動態面板',
     icon: 'ViewStream',
@@ -395,6 +431,21 @@ export const fieldTypeDefinitions: FieldTypeDefinition[] = [
     defaultProperties: {
       formula: '',
       displayFormat: 'number',
+    },
+  },
+  {
+    type: 'downloadreport',
+    label: '下載報告',
+    icon: 'PictureAsPdf',
+    category: 'special',
+    description: '產生 PDF 報告供下載',
+    defaultProperties: {
+      coverTitle: '報告',
+      showDate: true,
+      dateLabel: '日期',
+      buttonText: '下載報告',
+      excludeFieldTypes: ['welcome', 'ending', 'downloadreport', 'hidden', 'html'],
+      showLogo: true,
     },
   },
 ];

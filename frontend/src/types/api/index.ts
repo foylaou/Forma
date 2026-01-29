@@ -18,3 +18,6 @@ export * from './files';
 export * from './logs';
 export * from './systemInfo';
 export * from './settings';
+export * from './emailTemplates';
+export * from './roles';
+export * from './emailLogs';

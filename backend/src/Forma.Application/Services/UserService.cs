@@ -1,7 +1,6 @@
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
 using Forma.Application.Features.Users.DTOs;
-using Forma.Domain.Enums;
 using Forma.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,13 +13,16 @@ public class UserService : IUserService
 {
     private readonly IApplicationDbContext _context;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IPasswordPolicyService _passwordPolicyService;
 
     public UserService(
         IApplicationDbContext context,
-        IPasswordHasher passwordHasher)
+        IPasswordHasher passwordHasher,
+        IPasswordPolicyService passwordPolicyService)
     {
         _context = context;
         _passwordHasher = passwordHasher;
+        _passwordPolicyService = passwordPolicyService;
     }
 
     /// <inheritdoc />
@@ -38,13 +40,6 @@ public class UserService : IUserService
                 u.Username.ToLower().Contains(searchTerm) ||
                 u.Email.ToLower().Contains(searchTerm) ||
                 (u.Department != null && u.Department.ToLower().Contains(searchTerm)));
-        }
-
-        // 角色篩選
-        if (!string.IsNullOrWhiteSpace(request.SystemRole) &&
-            Enum.TryParse<SystemRole>(request.SystemRole, true, out var role))
-        {
-            query = query.Where(u => u.SystemRole == role);
         }
 
         // 啟用狀態篩選
@@ -65,9 +60,6 @@ public class UserService : IUserService
             "email" => request.SortDescending
                 ? query.OrderByDescending(u => u.Email)
                 : query.OrderBy(u => u.Email),
-            "systemrole" => request.SortDescending
-                ? query.OrderByDescending(u => u.SystemRole)
-                : query.OrderBy(u => u.SystemRole),
             "lastloginat" => request.SortDescending
                 ? query.OrderByDescending(u => u.LastLoginAt)
                 : query.OrderBy(u => u.LastLoginAt),
@@ -89,7 +81,8 @@ public class UserService : IUserService
                 Id = u.Id,
                 Username = u.Username,
                 Email = u.Email,
-                SystemRole = u.SystemRole.ToString(),
+                RoleId = u.RoleId,
+                RoleName = u.Role != null ? u.Role.Name : null,
                 Department = u.Department,
                 IsActive = u.IsActive,
                 LastLoginAt = u.LastLoginAt
@@ -111,6 +104,7 @@ public class UserService : IUserService
         CancellationToken cancellationToken = default)
     {
         var user = await _context.Users
+            .Include(u => u.Role)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
@@ -128,6 +122,7 @@ public class UserService : IUserService
         CancellationToken cancellationToken = default)
     {
         var user = await _context.Users
+            .Include(u => u.Role)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
@@ -146,6 +141,7 @@ public class UserService : IUserService
         CancellationToken cancellationToken = default)
     {
         var user = await _context.Users
+            .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
         if (user == null)
@@ -181,12 +177,9 @@ public class UserService : IUserService
             user.Email = request.Email;
         }
 
-        // 更新系統角色
-        if (!string.IsNullOrEmpty(request.SystemRole) &&
-            Enum.TryParse<SystemRole>(request.SystemRole, true, out var role))
-        {
-            user.SystemRole = role;
-        }
+        // 更新自訂角色
+        if (request.RoleId.HasValue)
+            user.RoleId = request.RoleId.Value == Guid.Empty ? null : request.RoleId.Value;
 
         // 更新其他欄位
         if (request.Department != null)
@@ -221,6 +214,13 @@ public class UserService : IUserService
         if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
         {
             throw new UnauthorizedAccessException("目前密碼不正確");
+        }
+
+        // 密碼策略驗證
+        var (isValid, errors) = await _passwordPolicyService.ValidatePasswordAsync(request.NewPassword, cancellationToken);
+        if (!isValid)
+        {
+            throw new InvalidOperationException(string.Join("；", errors));
         }
 
         // 更新密碼
@@ -284,7 +284,8 @@ public class UserService : IUserService
         Id = user.Id,
         Username = user.Username,
         Email = user.Email,
-        SystemRole = user.SystemRole.ToString(),
+        RoleId = user.RoleId,
+        RoleName = user.Role?.Name,
         Department = user.Department,
         JobTitle = user.JobTitle,
         PhoneNumber = user.PhoneNumber,

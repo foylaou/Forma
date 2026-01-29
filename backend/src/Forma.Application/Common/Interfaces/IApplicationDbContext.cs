@@ -94,6 +94,26 @@ public interface IApplicationDbContext
     DbSet<SystemSetting> SystemSettings { get; }
 
     /// <summary>
+    /// 信件範本
+    /// </summary>
+    DbSet<EmailTemplate> EmailTemplates { get; }
+
+    /// <summary>
+    /// 角色
+    /// </summary>
+    DbSet<Role> Roles { get; }
+
+    /// <summary>
+    /// 郵件日誌
+    /// </summary>
+    DbSet<EmailLog> EmailLogs { get; }
+
+    /// <summary>
+    /// FIDO2 憑證
+    /// </summary>
+    DbSet<FidoCredential> FidoCredentials { get; }
+
+    /// <summary>
     /// 儲存變更
     /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

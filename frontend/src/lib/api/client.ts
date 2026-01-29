@@ -1,9 +1,11 @@
 // API 客戶端基礎設定
 
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /** 請求逾時預設 30 秒 */
 const DEFAULT_TIMEOUT_MS = 30_000;
+
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -77,7 +79,7 @@ class ApiClient {
       ...options.headers,
     };
 
-    console.log(`[API] ${fetchOptions.method ?? 'GET'} ${endpoint}`, { url, online: navigator.onLine });
+
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs ?? DEFAULT_TIMEOUT_MS);

@@ -15,17 +15,14 @@ import {
   Person as ProfileIcon,
   Business as OrganizationsIcon,
   Folder as ProjectsIcon,
-  People as UsersIcon,
-  Security as SecurityIcon,
+  Key as KeyIcon,
 } from '@mui/icons-material';
 import { MainLayout } from '@/components/layout';
 import { useAuthStore } from '@/stores/authStore';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { OrganizationsSettings } from '@/components/settings/OrganizationsSettings';
 import { ProjectsSettings } from '@/components/settings/ProjectsSettings';
-import { UsersSettings } from '@/components/settings/UsersSettings';
-import { SecuritySettings } from '@/components/settings/SecuritySettings';
-
+import { PasskeySettings } from '@/components/settings/PasskeySettings';
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -42,7 +39,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 
 export function SettingsPage() {
   const { user } = useAuthStore();
-  const isAdmin = user?.systemRole === 'SystemAdmin';
+  const isAdmin = user ? (BigInt(user.permissions ?? 0) & 7n) === 7n : false;
   const [activeTab, setActiveTab] = useState(0);
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -73,6 +70,11 @@ export function SettingsPage() {
               iconPosition="start"
               label="個人資料"
             />
+            <Tab
+              icon={<KeyIcon />}
+              iconPosition="start"
+              label="安全金鑰"
+            />
             {isAdmin && (
               <Tab
                 icon={<OrganizationsIcon />}
@@ -87,20 +89,6 @@ export function SettingsPage() {
                 label="計畫管理"
               />
             )}
-            {isAdmin && (
-              <Tab
-                icon={<UsersIcon />}
-                iconPosition="start"
-                label="使用者管理"
-              />
-            )}
-            {isAdmin && (
-              <Tab
-                icon={<SecurityIcon />}
-                iconPosition="start"
-                label="安全設定"
-              />
-            )}
           </Tabs>
         </Box>
 
@@ -108,24 +96,17 @@ export function SettingsPage() {
           <TabPanel value={activeTab} index={0}>
             <ProfileSettings />
           </TabPanel>
+          <TabPanel value={activeTab} index={1}>
+            <PasskeySettings />
+          </TabPanel>
           {isAdmin && (
-            <TabPanel value={activeTab} index={1}>
+            <TabPanel value={activeTab} index={2}>
               <OrganizationsSettings />
             </TabPanel>
           )}
           {isAdmin && (
-            <TabPanel value={activeTab} index={2}>
-              <ProjectsSettings />
-            </TabPanel>
-          )}
-          {isAdmin && (
             <TabPanel value={activeTab} index={3}>
-              <UsersSettings />
-            </TabPanel>
-          )}
-          {isAdmin && (
-            <TabPanel value={activeTab} index={4}>
-              <SecuritySettings />
+              <ProjectsSettings />
             </TabPanel>
           )}
         </Box>

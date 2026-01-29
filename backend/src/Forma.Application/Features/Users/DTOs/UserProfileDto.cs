@@ -21,9 +21,14 @@ public class UserProfileDto
     public string Email { get; set; } = string.Empty;
 
     /// <summary>
-    /// 系統角色
+    /// 自訂角色 ID
     /// </summary>
-    public string SystemRole { get; set; } = string.Empty;
+    public Guid? RoleId { get; set; }
+
+    /// <summary>
+    /// 自訂角色名稱
+    /// </summary>
+    public string? RoleName { get; set; }
 
     /// <summary>
     /// 部門

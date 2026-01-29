@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authApi } from '@/lib/api/auth';
-import type { UserDto, LoginRequest, RegisterRequest } from '@/types/api';
+import type { UserDto, LoginRequest, RegisterRequest, AuthResponseDto } from '@/types/api';
 
 interface AuthState {
   // 狀態
@@ -18,6 +18,7 @@ interface AuthState {
 
   // 動作
   login: (data: LoginRequest) => Promise<void>;
+  loginWithFido2Response: (response: AuthResponseDto) => void;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
@@ -55,6 +56,16 @@ export const useAuthStore = create<AuthState>()(
           });
           throw error;
         }
+      },
+
+      // FIDO2 登入完成後設定狀態
+      loginWithFido2Response: (response: AuthResponseDto) => {
+        set({
+          user: response.user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
       },
 
       // 註冊

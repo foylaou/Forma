@@ -167,9 +167,10 @@ function ClassicModeContent({
     mode: 'onChange',
   });
 
-  const handleSubmit = (data: Record<string, unknown>) => {
-    console.log('Form submitted:', data);
-    alert('表單提交成功！資料已記錄到 Console');
+  const handleSubmit = () => {
+    const data = methods.getValues();
+    console.log('Form submitted (preview):', data);
+    alert('（預覽模式）表單提交成功！資料已記錄到 Console');
   };
 
   const handleGoToEdit = () => {
@@ -311,7 +312,7 @@ function ClassicModeContent({
                 ) : (
                   currentPage.fields.map((field) => (
                     <Box key={field.id} sx={{ mb: 3 }}>
-                      <FieldRenderer field={field} allFieldsRequired={allFieldsRequired} />
+                      <FieldRenderer field={field} allFieldsRequired={allFieldsRequired} schema={schema} />
                     </Box>
                   ))
                 )}
@@ -353,7 +354,7 @@ function ClassicModeContent({
                   variant="contained"
                   size="large"
                   sx={{ minWidth: 120 }}
-                  onClick={() => methods.handleSubmit(handleSubmit)()}
+                  onClick={handleSubmit}
                 >
                   {schema.metadata.submitButtonText || '提交'}
                 </Button>
@@ -446,9 +447,9 @@ export function FormPreviewPage() {
     navigate(-1);
   };
 
-  const handleCardSubmit = (data: Record<string, unknown>) => {
-    console.log('Form submitted:', data);
-    alert('表單提交成功！資料已記錄到 Console');
+  const handleCardSubmit = async (data: Record<string, unknown>) => {
+    console.log('Form submitted (preview):', data);
+    alert('（預覽模式）表單提交成功！資料已記錄到 Console');
   };
 
   return (

@@ -43,6 +43,7 @@ public interface IFormService
         UpdateFormRequest request,
         Guid currentUserId,
         bool isSystemAdmin,
+        bool hasLockPermission = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -52,6 +53,7 @@ public interface IFormService
         Guid formId,
         Guid currentUserId,
         bool isSystemAdmin,
+        bool hasLockPermission = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -61,6 +63,7 @@ public interface IFormService
         Guid formId,
         Guid currentUserId,
         bool isSystemAdmin,
+        bool hasLockPermission = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -70,6 +73,7 @@ public interface IFormService
         Guid formId,
         Guid currentUserId,
         bool isSystemAdmin,
+        bool hasLockPermission = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -95,6 +99,26 @@ public interface IFormService
     /// </summary>
     Task<FormDto> GetPublicFormAsync(
         Guid formId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 鎖定表單
+    /// </summary>
+    Task<FormDto> LockFormAsync(
+        Guid formId,
+        Guid currentUserId,
+        bool isSystemAdmin,
+        bool hasLockPermission,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 解鎖表單
+    /// </summary>
+    Task<FormDto> UnlockFormAsync(
+        Guid formId,
+        Guid currentUserId,
+        bool isSystemAdmin,
+        bool hasLockPermission,
         CancellationToken cancellationToken = default);
 }
 

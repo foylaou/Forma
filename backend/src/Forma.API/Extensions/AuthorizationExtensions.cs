@@ -18,24 +18,25 @@ public static class AuthorizationExtensions
             .AddPolicy(Policies.RequireUser, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(
-                    SystemRole.User.ToString(),
-                    SystemRole.Auditor.ToString(),
-                    SystemRole.SystemAdmin.ToString());
             })
-            // RequireAuditor: 審核員或系統管理員
+            // RequireAuditor: 需要有權限的使用者
             .AddPolicy(Policies.RequireAuditor, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(
-                    SystemRole.Auditor.ToString(),
-                    SystemRole.SystemAdmin.ToString());
+                policy.RequireClaim("permissions");
             })
             // RequireSystemAdmin: 僅系統管理員
             .AddPolicy(Policies.RequireSystemAdmin, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(SystemRole.SystemAdmin.ToString());
+                policy.RequireAssertion(context =>
+                {
+                    var permClaim = context.User.FindFirst("permissions");
+                    if (permClaim == null || !long.TryParse(permClaim.Value, out var perms))
+                        return false;
+                    const long adminPerms = (long)UserPermission.ManageUsers | (long)UserPermission.ManageRoles | (long)UserPermission.ManageSettings;
+                    return (perms & adminPerms) == adminPerms;
+                });
             });
 
         return services;

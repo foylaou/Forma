@@ -18,6 +18,10 @@ export { filesApi } from './files';
 export { logsApi } from './logs';
 export { systemInfoApi } from './systemInfo';
 export { settingsApi } from './settings';
+export { emailTemplatesApi } from './emailTemplates';
+export { rolesApi } from './roles';
+export { emailLogsApi } from './emailLogs';
+export { fido2Api } from './fido2';
 
 // 統一 API 物件
 export const api = {
@@ -38,6 +42,10 @@ export const api = {
   logs: () => import('./logs').then(m => m.logsApi),
   systemInfo: () => import('./systemInfo').then(m => m.systemInfoApi),
   settings: () => import('./settings').then(m => m.settingsApi),
+  emailTemplates: () => import('./emailTemplates').then(m => m.emailTemplatesApi),
+  roles: () => import('./roles').then(m => m.rolesApi),
+  emailLogs: () => import('./emailLogs').then(m => m.emailLogsApi),
+  fido2: () => import('./fido2').then(m => m.fido2Api),
 };
 
 export default api;

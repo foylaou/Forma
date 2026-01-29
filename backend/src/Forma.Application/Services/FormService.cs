@@ -46,6 +46,7 @@ public class FormService : IFormService
 
         var query = _context.Forms
             .Include(f => f.CreatedBy)
+            .Include(f => f.LockedBy)
             .Include(f => f.Submissions)
             .Where(f => f.ProjectId == request.ProjectId)
             .AsNoTracking();
@@ -113,7 +114,10 @@ public class FormService : IFormService
                 PublishedAt = f.PublishedAt,
                 CreatedAt = f.CreatedAt,
                 CreatedByUsername = f.CreatedBy.Username,
-                SubmissionCount = f.Submissions.Count
+                SubmissionCount = f.Submissions.Count,
+                IsLocked = f.IsLocked,
+                LockedByUsername = f.LockedBy != null ? f.LockedBy.Username : null,
+                LockedAt = f.LockedAt
             })
             .ToListAsync(cancellationToken);
 
@@ -137,6 +141,7 @@ public class FormService : IFormService
             .Include(f => f.Project)
                 .ThenInclude(p => p.Members.Where(m => m.RemovedAt == null))
             .Include(f => f.CreatedBy)
+            .Include(f => f.LockedBy)
             .Include(f => f.Template)
             .Include(f => f.Submissions)
             .AsNoTracking()
@@ -190,7 +195,10 @@ public class FormService : IFormService
             SubmissionCount = form.Submissions.Count,
             ProjectSettings = form.Project.Settings,
             CanEdit = canEdit,
-            CanDelete = canDelete
+            CanDelete = canDelete,
+            IsLocked = form.IsLocked,
+            LockedByUsername = form.LockedBy?.Username,
+            LockedAt = form.LockedAt
         };
     }
 
@@ -263,12 +271,14 @@ public class FormService : IFormService
         UpdateFormRequest request,
         Guid currentUserId,
         bool isSystemAdmin,
+        bool hasLockPermission = false,
         CancellationToken cancellationToken = default)
     {
         var form = await _context.Forms
             .Include(f => f.Project)
                 .ThenInclude(p => p.Members.Where(m => m.RemovedAt == null))
             .Include(f => f.CreatedBy)
+            .Include(f => f.LockedBy)
             .Include(f => f.Template)
             .Include(f => f.Submissions)
             .FirstOrDefaultAsync(f => f.Id == formId, cancellationToken);
@@ -276,6 +286,12 @@ public class FormService : IFormService
         if (form == null)
         {
             throw new KeyNotFoundException("找不到表單");
+        }
+
+        // 鎖定檢查
+        if (form.IsLocked && !hasLockPermission)
+        {
+            throw new InvalidOperationException("表單已鎖定，無法編輯");
         }
 
         // 檢查權限：必須是 Owner/Manager 或表單建立者或系統管理員
@@ -351,7 +367,10 @@ public class FormService : IFormService
             CanEdit = true,
             CanDelete = userMember?.Role == ProjectRole.Owner ||
                        userMember?.Role == ProjectRole.Manager ||
-                       isSystemAdmin
+                       isSystemAdmin,
+            IsLocked = form.IsLocked,
+            LockedByUsername = form.LockedBy?.Username,
+            LockedAt = form.LockedAt
         };
     }
 
@@ -360,6 +379,7 @@ public class FormService : IFormService
         Guid formId,
         Guid currentUserId,
         bool isSystemAdmin,
+        bool hasLockPermission = false,
         CancellationToken cancellationToken = default)
     {
         var form = await _context.Forms
@@ -371,6 +391,12 @@ public class FormService : IFormService
         if (form == null)
         {
             throw new KeyNotFoundException("找不到表單");
+        }
+
+        // 鎖定檢查
+        if (form.IsLocked && !hasLockPermission)
+        {
+            throw new InvalidOperationException("表單已鎖定，無法刪除");
         }
 
         // 檢查權限：必須是 Owner/Manager 或系統管理員
@@ -402,12 +428,14 @@ public class FormService : IFormService
         Guid formId,
         Guid currentUserId,
         bool isSystemAdmin,
+        bool hasLockPermission = false,
         CancellationToken cancellationToken = default)
     {
         var form = await _context.Forms
             .Include(f => f.Project)
                 .ThenInclude(p => p.Members.Where(m => m.RemovedAt == null))
             .Include(f => f.CreatedBy)
+            .Include(f => f.LockedBy)
             .Include(f => f.Template)
             .Include(f => f.Submissions)
             .FirstOrDefaultAsync(f => f.Id == formId, cancellationToken);
@@ -415,6 +443,12 @@ public class FormService : IFormService
         if (form == null)
         {
             throw new KeyNotFoundException("找不到表單");
+        }
+
+        // 鎖定檢查
+        if (form.IsLocked && !hasLockPermission)
+        {
+            throw new InvalidOperationException("表單已鎖定，無法發布");
         }
 
         // 檢查權限：必須是 Owner/Manager 或表單建立者或系統管理員
@@ -494,7 +528,10 @@ public class FormService : IFormService
             CanEdit = true,
             CanDelete = userMember?.Role == ProjectRole.Owner ||
                        userMember?.Role == ProjectRole.Manager ||
-                       isSystemAdmin
+                       isSystemAdmin,
+            IsLocked = form.IsLocked,
+            LockedByUsername = form.LockedBy?.Username,
+            LockedAt = form.LockedAt
         };
     }
 
@@ -503,12 +540,14 @@ public class FormService : IFormService
         Guid formId,
         Guid currentUserId,
         bool isSystemAdmin,
+        bool hasLockPermission = false,
         CancellationToken cancellationToken = default)
     {
         var form = await _context.Forms
             .Include(f => f.Project)
                 .ThenInclude(p => p.Members.Where(m => m.RemovedAt == null))
             .Include(f => f.CreatedBy)
+            .Include(f => f.LockedBy)
             .Include(f => f.Template)
             .Include(f => f.Submissions)
             .FirstOrDefaultAsync(f => f.Id == formId, cancellationToken);
@@ -516,6 +555,12 @@ public class FormService : IFormService
         if (form == null)
         {
             throw new KeyNotFoundException("找不到表單");
+        }
+
+        // 鎖定檢查
+        if (form.IsLocked && !hasLockPermission)
+        {
+            throw new InvalidOperationException("表單已鎖定，無法下架");
         }
 
         // 檢查權限：必須是 Owner/Manager 或系統管理員
@@ -566,7 +611,10 @@ public class FormService : IFormService
             CanEdit = true,
             CanDelete = userMember?.Role == ProjectRole.Owner ||
                        userMember?.Role == ProjectRole.Manager ||
-                       isSystemAdmin
+                       isSystemAdmin,
+            IsLocked = form.IsLocked,
+            LockedByUsername = form.LockedBy?.Username,
+            LockedAt = form.LockedAt
         };
     }
 
@@ -737,6 +785,151 @@ public class FormService : IFormService
             ProjectSettings = form.Project.Settings,
             CanEdit = false,
             CanDelete = false
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<FormDto> LockFormAsync(
+        Guid formId,
+        Guid currentUserId,
+        bool isSystemAdmin,
+        bool hasLockPermission,
+        CancellationToken cancellationToken = default)
+    {
+        if (!hasLockPermission)
+        {
+            throw new UnauthorizedAccessException("您沒有鎖定/解鎖表單的權限");
+        }
+
+        var form = await _context.Forms
+            .Include(f => f.Project)
+                .ThenInclude(p => p.Members.Where(m => m.RemovedAt == null))
+            .Include(f => f.CreatedBy)
+            .Include(f => f.LockedBy)
+            .Include(f => f.Template)
+            .Include(f => f.Submissions)
+            .FirstOrDefaultAsync(f => f.Id == formId, cancellationToken);
+
+        if (form == null)
+        {
+            throw new KeyNotFoundException("找不到表單");
+        }
+
+        if (form.IsLocked)
+        {
+            throw new InvalidOperationException("表單已經鎖定");
+        }
+
+        form.IsLocked = true;
+        form.LockedById = currentUserId;
+        form.LockedAt = DateTime.UtcNow;
+        form.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var lockedByUser = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken);
+
+        var userMember = form.Project.Members
+            .FirstOrDefault(m => m.UserId == currentUserId);
+
+        return new FormDto
+        {
+            Id = form.Id,
+            ProjectId = form.ProjectId,
+            ProjectName = form.Project.Name,
+            Name = form.Name,
+            Description = form.Description,
+            Schema = form.Schema,
+            TemplateId = form.TemplateId,
+            TemplateName = form.Template?.Name,
+            CreatedById = form.CreatedById,
+            CreatedByUsername = form.CreatedBy.Username,
+            CreatedAt = form.CreatedAt,
+            UpdatedAt = form.UpdatedAt,
+            PublishedAt = form.PublishedAt,
+            IsActive = form.IsActive,
+            Version = form.Version,
+            AccessControl = form.AccessControl.ToString(),
+            SubmissionCount = form.Submissions.Count,
+            CanEdit = true,
+            CanDelete = userMember?.Role == ProjectRole.Owner ||
+                       userMember?.Role == ProjectRole.Manager ||
+                       isSystemAdmin,
+            IsLocked = form.IsLocked,
+            LockedByUsername = lockedByUser?.Username,
+            LockedAt = form.LockedAt
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<FormDto> UnlockFormAsync(
+        Guid formId,
+        Guid currentUserId,
+        bool isSystemAdmin,
+        bool hasLockPermission,
+        CancellationToken cancellationToken = default)
+    {
+        if (!hasLockPermission)
+        {
+            throw new UnauthorizedAccessException("您沒有鎖定/解鎖表單的權限");
+        }
+
+        var form = await _context.Forms
+            .Include(f => f.Project)
+                .ThenInclude(p => p.Members.Where(m => m.RemovedAt == null))
+            .Include(f => f.CreatedBy)
+            .Include(f => f.Template)
+            .Include(f => f.Submissions)
+            .FirstOrDefaultAsync(f => f.Id == formId, cancellationToken);
+
+        if (form == null)
+        {
+            throw new KeyNotFoundException("找不到表單");
+        }
+
+        if (!form.IsLocked)
+        {
+            throw new InvalidOperationException("表單尚未鎖定");
+        }
+
+        form.IsLocked = false;
+        form.LockedById = null;
+        form.LockedAt = null;
+        form.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var userMember = form.Project.Members
+            .FirstOrDefault(m => m.UserId == currentUserId);
+
+        return new FormDto
+        {
+            Id = form.Id,
+            ProjectId = form.ProjectId,
+            ProjectName = form.Project.Name,
+            Name = form.Name,
+            Description = form.Description,
+            Schema = form.Schema,
+            TemplateId = form.TemplateId,
+            TemplateName = form.Template?.Name,
+            CreatedById = form.CreatedById,
+            CreatedByUsername = form.CreatedBy.Username,
+            CreatedAt = form.CreatedAt,
+            UpdatedAt = form.UpdatedAt,
+            PublishedAt = form.PublishedAt,
+            IsActive = form.IsActive,
+            Version = form.Version,
+            AccessControl = form.AccessControl.ToString(),
+            SubmissionCount = form.Submissions.Count,
+            CanEdit = true,
+            CanDelete = userMember?.Role == ProjectRole.Owner ||
+                       userMember?.Role == ProjectRole.Manager ||
+                       isSystemAdmin,
+            IsLocked = false,
+            LockedByUsername = null,
+            LockedAt = null
         };
     }
 }

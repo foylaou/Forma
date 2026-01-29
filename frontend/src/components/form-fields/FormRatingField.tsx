@@ -25,6 +25,11 @@ export function FormRatingField({ field }: FormRatingFieldProps) {
       name={name}
       control={control}
       defaultValue={field.defaultValue ?? null}
+      rules={{
+        validate: required
+          ? (value) => (value !== null && value !== undefined && value !== 0) || '此欄位為必填'
+          : undefined,
+      }}
       render={({ field: controllerField, fieldState: { error } }) => {
         const currentLabel =
           controllerField.value && labels.length > 0

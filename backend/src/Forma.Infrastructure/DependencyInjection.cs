@@ -1,3 +1,4 @@
+using Fido2NetLib;
 using Forma.Application.Common.Interfaces;
 using Forma.Domain.Interfaces;
 using Forma.Infrastructure.Auth;
@@ -66,6 +67,18 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<FormaDbContext>());
         services.AddHttpContextAccessor();
+
+        // FIDO2
+        services.AddSingleton<IFido2>(sp =>
+        {
+            return new Fido2(new Fido2Configuration
+            {
+                ServerDomain = configuration["Fido2:ServerDomain"] ?? "localhost",
+                ServerName = configuration["Fido2:ServerName"] ?? "Forma",
+                Origins = configuration.GetSection("Fido2:Origins").Get<HashSet<string>>()
+                           ?? new HashSet<string> { "https://localhost:5173" }
+            });
+        });
 
         return services;
     }

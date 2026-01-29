@@ -22,15 +22,24 @@ import { FormPanelField } from './FormPanelField';
 import { FormPanelDynamicField } from './FormPanelDynamicField';
 import { FormHtmlField } from './FormHtmlField';
 import { FormExpressionField } from './FormExpressionField';
+import { FormCascadingSelectField } from './FormCascadingSelectField';
+import { FormWelcomeField } from './FormWelcomeField';
+import { FormEndingField } from './FormEndingField';
+import { FormDownloadReportField } from './FormDownloadReportField';
 import { Box, Typography } from '@mui/material';
+import type { FormSchema } from '@/types/form';
 
 interface FieldRendererProps {
   field: Field;
   /** 全域設定：所有欄位設為必填 */
   allFieldsRequired?: boolean;
+  /** 傳入 schema 供下載報告欄位使用 */
+  schema?: FormSchema;
+  /** 計畫 Logo URL */
+  logoUrl?: string;
 }
 
-export function FieldRenderer({ field, allFieldsRequired }: FieldRendererProps) {
+export function FieldRenderer({ field, allFieldsRequired, schema, logoUrl }: FieldRendererProps) {
   // Apply global required setting
   const effectiveField = allFieldsRequired
     ? { ...field, required: true }
@@ -73,6 +82,10 @@ export function FieldRenderer({ field, allFieldsRequired }: FieldRendererProps) 
     // 排序
     case 'ranking':
       return <FormRankingField field={effectiveField} />;
+
+    // 階層選單
+    case 'cascadingselect':
+      return <FormCascadingSelectField field={effectiveField} />;
 
     // 評分類
     case 'rating':
@@ -120,6 +133,18 @@ export function FieldRenderer({ field, allFieldsRequired }: FieldRendererProps) 
     // 計算欄位
     case 'expression':
       return <FormExpressionField field={effectiveField} />;
+
+    // 歡迎區塊
+    case 'welcome':
+      return <FormWelcomeField field={effectiveField} />;
+
+    // 結束區塊
+    case 'ending':
+      return <FormEndingField field={effectiveField} />;
+
+    // 下載報告
+    case 'downloadreport':
+      return <FormDownloadReportField field={effectiveField} schema={schema} logoUrl={logoUrl} />;
 
     // 隱藏欄位
     case 'hidden':

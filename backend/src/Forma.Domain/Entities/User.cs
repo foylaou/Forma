@@ -1,5 +1,3 @@
-using Forma.Domain.Enums;
-
 namespace Forma.Domain.Entities;
 
 /// <summary>
@@ -23,9 +21,14 @@ public class User : AuditableEntity
     public string PasswordHash { get; set; } = string.Empty;
 
     /// <summary>
-    /// 系統角色
+    /// 自訂角色 ID（關聯 Role 表）
     /// </summary>
-    public SystemRole SystemRole { get; set; } = SystemRole.User;
+    public Guid? RoleId { get; set; }
+
+    /// <summary>
+    /// 自訂角色
+    /// </summary>
+    public virtual Role? Role { get; set; }
 
     /// <summary>
     /// 部門
@@ -56,6 +59,7 @@ public class User : AuditableEntity
     public virtual ICollection<Project> CreatedProjects { get; set; } = new List<Project>();
     public virtual ICollection<ProjectMember> ProjectMemberships { get; set; } = new List<ProjectMember>();
     public virtual ICollection<Form> CreatedForms { get; set; } = new List<Form>();
+    public virtual ICollection<Form> LockedForms { get; set; } = new List<Form>();
     public virtual ICollection<FormSubmission> Submissions { get; set; } = new List<FormSubmission>();
     public virtual ICollection<FormTemplate> CreatedTemplates { get; set; } = new List<FormTemplate>();
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();

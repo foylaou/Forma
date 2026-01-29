@@ -28,6 +28,7 @@ import {
   Divider,
   Stack,
   Select,
+  Menu,
   MenuItem,
   FormControl,
   InputLabel,
@@ -48,6 +49,9 @@ import {
   Settings as SettingsIcon,
   ContentCopy as CopyIcon,
   Link as LinkIcon,
+  ArrowDropUp as ArrowDropUpIcon,
+  SaveAlt as SaveAltIcon,
+  Lock as LockIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
 import { useFormBuilderStore } from '@/stores/formBuilderStore';
@@ -60,6 +64,9 @@ import { PropertyEditor } from '@/components/form-builder/properties/PropertyEdi
 import { UserMenu } from '@/components/auth';
 import { FilePicker, type SelectedFile } from '@/components/common';
 import { parseProjectTheme } from '@/hooks/useFormTheme';
+import { TemplateImportDialog } from '@/components/form-builder/templates/TemplateImportDialog';
+import { TemplateSaveDialog } from '@/components/form-builder/templates/TemplateSaveDialog';
+import { useAuthStore } from '@/stores/authStore';
 import type { FormDto } from '@/types/api/forms';
 import type { ProjectDto } from '@/types/api/projects';
 
@@ -81,6 +88,9 @@ export function FormEditorPage() {
   const { projectId, formId } = useParams<{ projectId: string; formId?: string }>();
   const navigate = useNavigate();
   const { schema, loadSchema, updateSettings, undo, redo, canUndo, canRedo } = useFormBuilderStore();
+  const { user } = useAuthStore();
+  // LockUnlockForms = 1n << 33n (需要 BigInt 做位元運算)
+  const hasLockPermission = !!user && (BigInt(user.permissions) & (1n << 33n)) !== 0n;
 
   // 判斷是否為建立模式（沒有 formId 表示建立新表單）
   const isCreateMode = !formId;
@@ -95,6 +105,10 @@ export function FormEditorPage() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [templateImportOpen, setTemplateImportOpen] = useState(false);
+  const [templateSaveOpen, setTemplateSaveOpen] = useState(false);
+  const [templateOverwriteOpen, setTemplateOverwriteOpen] = useState(false);
+  const [templateMenuAnchor, setTemplateMenuAnchor] = useState<null | HTMLElement>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -133,7 +147,7 @@ export function FormEditorPage() {
         version: '1.0',
         id: `form-${Date.now()}`,
         metadata: { title: '新表單', description: '' },
-        pages: [{ id: 'page-1', title: '第一頁', fields: [] }],
+        pages: [{ id: 'page-1', title: '第1頁', fields: [] }],
         settings: {},
       });
     } catch (err) {
@@ -458,6 +472,14 @@ export function FormEditorPage() {
               >
                 {form.publishedAt ? '已發布' : '草稿'}
               </Typography>
+              {form.isLocked && (
+                <Tooltip title={`已鎖定${form.lockedByUsername ? ` (${form.lockedByUsername})` : ''}`}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'warning.main' }}>
+                    <LockIcon fontSize="small" />
+                    <Typography variant="caption" color="warning.main">已鎖定</Typography>
+                  </Box>
+                </Tooltip>
+              )}
             </Box>
           )}
 
@@ -497,8 +519,42 @@ export function FormEditorPage() {
             </IconButton>
           </Tooltip>
 
+          <Tooltip title="匯入範本">
+            <IconButton onClick={() => setTemplateImportOpen(true)} sx={{ ml: 1 }}>
+              <ImportIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', ml: 0.5 }}>
+            <Tooltip title="存為範本">
+              <IconButton onClick={() => setTemplateSaveOpen(true)}>
+                <SaveAltIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="覆蓋範本">
+              <IconButton
+                onClick={(e) => setTemplateMenuAnchor(e.currentTarget)}
+                sx={{ p: 0.25, ml: -0.5 }}
+                size="small"
+              >
+                <ArrowDropUpIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Menu
+            anchorEl={templateMenuAnchor}
+            open={Boolean(templateMenuAnchor)}
+            onClose={() => setTemplateMenuAnchor(null)}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <MenuItem onClick={() => { setTemplateMenuAnchor(null); setTemplateOverwriteOpen(true); }}>
+              覆蓋範本
+            </MenuItem>
+          </Menu>
+
           <Tooltip title="匯入 JSON">
-            <IconButton onClick={handleImportJson} sx={{ ml: 1 }}>
+            <IconButton onClick={handleImportJson}>
               <ImportIcon />
             </IconButton>
           </Tooltip>
@@ -524,14 +580,14 @@ export function FormEditorPage() {
               variant="outlined"
               startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
               onClick={handleSave}
-              disabled={saving || !hasUnsavedChanges}
+              disabled={saving || !hasUnsavedChanges || (!!form?.isLocked && !hasLockPermission)}
               sx={{ ml: 1 }}
             >
               {isCreateMode ? '建立' : '儲存'}
             </Button>
           </Tooltip>
 
-          {!isCreateMode && form && form.isActive && !form.publishedAt && (
+          {!isCreateMode && form && form.isActive && !form.publishedAt && (!form.isLocked || hasLockPermission) && (
             <Button
               variant="contained"
               startIcon={<PublishIcon />}
@@ -969,6 +1025,35 @@ export function FormEditorPage() {
           <Button onClick={() => setSettingsOpen(false)}>關閉</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Template Import Dialog */}
+      <TemplateImportDialog
+        open={templateImportOpen}
+        onClose={() => setTemplateImportOpen(false)}
+        onImported={() => {
+          setHasUnsavedChanges(true);
+          setSnackbar({ open: true, message: '範本匯入成功', severity: 'success' });
+        }}
+      />
+
+      {/* Template Save Dialog */}
+      <TemplateSaveDialog
+        open={templateSaveOpen}
+        onClose={() => setTemplateSaveOpen(false)}
+        mode="form"
+        data={schema}
+        onSaved={() => setSnackbar({ open: true, message: '已存為範本', severity: 'success' })}
+      />
+
+      {/* Template Overwrite Dialog */}
+      <TemplateSaveDialog
+        open={templateOverwriteOpen}
+        onClose={() => setTemplateOverwriteOpen(false)}
+        mode="form"
+        data={schema}
+        saveMode="overwrite"
+        onSaved={() => setSnackbar({ open: true, message: '範本已覆蓋', severity: 'success' })}
+      />
 
       {/* Snackbar */}
       <Snackbar

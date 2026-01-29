@@ -170,9 +170,9 @@ const getTargetFields = (pages: FormPage[], activePageId: string, parentId?: str
     return page.fields;
   }
 
-  // Find parent panel
+  // Find parent panel or paneldynamic
   const parentResult = findFieldInFields(page.fields, parentId);
-  if (parentResult && parentResult.field.type === 'panel' && parentResult.field.properties) {
+  if (parentResult && (parentResult.field.type === 'panel' || parentResult.field.type === 'paneldynamic') && parentResult.field.properties) {
     return parentResult.field.properties.fields;
   }
 

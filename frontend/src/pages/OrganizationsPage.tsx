@@ -392,7 +392,7 @@ function OrganizationsSkeleton() {
 
 export function OrganizationsPage() {
   const { user } = useAuthStore();
-  const isAdmin = user?.systemRole === 'SystemAdmin';
+  const isAdmin = user ? (BigInt(user.permissions ?? 0) & 7n) === 7n : false;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -238,4 +238,117 @@ public class LogController : ControllerBase
 
         return Ok(log);
     }
+
+    /// <summary>
+    /// 分頁查詢郵件日誌
+    /// </summary>
+    [HttpGet("email")]
+    [ProducesResponseType(typeof(PagedResult<EmailLogDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<EmailLogDto>>> GetEmailLogs(
+        [FromQuery] EmailLogQueryParameters parameters,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Getting email logs with parameters: {@Parameters}", parameters);
+
+        var query = _context.EmailLogs.AsQueryable();
+
+        // 範本篩選
+        if (!string.IsNullOrWhiteSpace(parameters.TemplateKey))
+            query = query.Where(l => l.TemplateKey == parameters.TemplateKey);
+
+        // 成功/失敗篩選
+        if (parameters.IsSuccess.HasValue)
+            query = query.Where(l => l.IsSuccess == parameters.IsSuccess.Value);
+
+        // 日期篩選
+        if (parameters.StartDate.HasValue)
+        {
+            var startDateTime = DateTime.SpecifyKind(
+                parameters.StartDate.Value.ToDateTime(TimeOnly.MinValue),
+                DateTimeKind.Utc);
+            query = query.Where(l => l.SentAt >= startDateTime);
+        }
+
+        if (parameters.EndDate.HasValue)
+        {
+            var endDateTime = DateTime.SpecifyKind(
+                parameters.EndDate.Value.ToDateTime(TimeOnly.MaxValue),
+                DateTimeKind.Utc);
+            query = query.Where(l => l.SentAt <= endDateTime);
+        }
+
+        // 關鍵字搜尋
+        if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
+            query = query.Where(l =>
+                l.RecipientEmail.Contains(parameters.SearchTerm) ||
+                (l.RecipientName != null && l.RecipientName.Contains(parameters.SearchTerm)) ||
+                l.Subject.Contains(parameters.SearchTerm) ||
+                (l.UserName != null && l.UserName.Contains(parameters.SearchTerm)));
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // 排序
+        query = parameters.SortDescending
+            ? query.OrderByDescending(l => l.SentAt)
+            : query.OrderBy(l => l.SentAt);
+
+        var items = await query
+            .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+            .Take(parameters.PageSize)
+            .Select(l => new EmailLogDto
+            {
+                Id = l.Id,
+                RecipientEmail = l.RecipientEmail,
+                RecipientName = l.RecipientName,
+                Subject = l.Subject,
+                TemplateKey = l.TemplateKey,
+                IsSuccess = l.IsSuccess,
+                ErrorMessage = l.ErrorMessage,
+                SentAt = l.SentAt,
+                UserId = l.UserId,
+                UserName = l.UserName
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(new PagedResult<EmailLogDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = parameters.PageNumber,
+            PageSize = parameters.PageSize
+        });
+    }
+
+    /// <summary>
+    /// 取得郵件日誌詳情
+    /// </summary>
+    [HttpGet("email/{id:long}")]
+    [ProducesResponseType(typeof(EmailLogDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<EmailLogDto>> GetEmailLogById(
+        long id,
+        CancellationToken cancellationToken = default)
+    {
+        var log = await _context.EmailLogs
+            .Where(l => l.Id == id)
+            .Select(l => new EmailLogDto
+            {
+                Id = l.Id,
+                RecipientEmail = l.RecipientEmail,
+                RecipientName = l.RecipientName,
+                Subject = l.Subject,
+                TemplateKey = l.TemplateKey,
+                IsSuccess = l.IsSuccess,
+                ErrorMessage = l.ErrorMessage,
+                SentAt = l.SentAt,
+                UserId = l.UserId,
+                UserName = l.UserName
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (log == null)
+            return NotFound(new { error = "郵件日誌不存在" });
+
+        return Ok(log);
+    }
 }

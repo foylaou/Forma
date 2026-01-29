@@ -176,6 +176,30 @@ public class SystemSettingController : ControllerBase
         return Ok(new { message = "Security Headers 設定已更新" });
     }
 
+    // ==================== FIDO2 設定 ====================
+
+    /// <summary>
+    /// 獲取 FIDO2 設定
+    /// </summary>
+    [HttpGet("fido2")]
+    [ProducesResponseType(typeof(Fido2SettingsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<Fido2SettingsDto>> GetFido2Settings()
+    {
+        var result = await _settingService.GetSettingAsync<Fido2SettingsDto>("Fido2");
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// 更新 FIDO2 設定
+    /// </summary>
+    [HttpPut("fido2")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateFido2Settings([FromBody] Fido2SettingsDto settings)
+    {
+        await _settingService.UpdateSettingAsync("Fido2", settings);
+        return Ok(new { message = "FIDO2 設定已更新" });
+    }
+
     // ==================== CORS 設定 ====================
 
     /// <summary>

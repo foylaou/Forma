@@ -3,7 +3,7 @@
  * 支援登入和註冊切換
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -23,10 +23,33 @@ import {
   Email as EmailIcon,
   Lock as LockIcon,
   Person as PersonIcon,
+  Key as KeyIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
+import { fido2Api } from '@/lib/api/fido2';
+
+function base64UrlToBuffer(base64url: string): ArrayBuffer {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = base64.length % 4;
+  const padded = pad ? base64 + '='.repeat(4 - pad) : base64;
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+function bufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (const b of bytes) {
+    binary += String.fromCharCode(b);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
 interface LoginFormData {
   emailOrUsername: string;
@@ -47,10 +70,20 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { login, register: registerUser, isLoading, error, clearError } = useAuthStore();
+  const { login, loginWithFido2Response, register: registerUser, isLoading, error, clearError } = useAuthStore();
+  const [fido2Enabled, setFido2Enabled] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
 
   // 取得重導向目標
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  // 檢查 FIDO2 是否啟用
+  useEffect(() => {
+    fido2Api.getStatus()
+      .then((s) => setFido2Enabled(s.enableFido2))
+      .catch(() => {});
+  }, []);
 
   // 登入表單
   const loginForm = useForm<LoginFormData>({
@@ -93,6 +126,63 @@ export function LoginPage() {
       navigate(from, { replace: true });
     } catch {
       // 錯誤已在 store 中處理
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    try {
+      setPasskeyLoading(true);
+      setPasskeyError(null);
+      clearError();
+
+      // 1. 取得認證選項
+      const options = await fido2Api.startAuthentication();
+
+      // 2. 解析 base64url 欄位為 ArrayBuffer
+      const publicKeyOptions: PublicKeyCredentialRequestOptions = {
+        ...options,
+        challenge: base64UrlToBuffer((options as unknown as Record<string, string>).challenge),
+      };
+      if (Array.isArray(options.allowCredentials)) {
+        publicKeyOptions.allowCredentials = options.allowCredentials.map((c) => ({
+          ...c,
+          id: typeof c.id === 'string' ? base64UrlToBuffer(c.id as unknown as string) : c.id,
+        }));
+      }
+
+      // 3. 呼叫瀏覽器 WebAuthn API
+      const assertion = await navigator.credentials.get({
+        publicKey: publicKeyOptions,
+      }) as PublicKeyCredential | null;
+
+      if (!assertion) throw new Error('使用者取消了認證');
+
+      const assertionResponse = assertion.response as AuthenticatorAssertionResponse;
+
+      // 4. 送回伺服器完成認證
+      const result = await fido2Api.completeAuthentication({
+        id: assertion.id,
+        rawId: bufferToBase64Url(assertion.rawId),
+        type: assertion.type,
+        response: {
+          authenticatorData: bufferToBase64Url(assertionResponse.authenticatorData),
+          clientDataJSON: bufferToBase64Url(assertionResponse.clientDataJSON),
+          signature: bufferToBase64Url(assertionResponse.signature),
+          userHandle: assertionResponse.userHandle
+            ? bufferToBase64Url(assertionResponse.userHandle)
+            : null,
+        },
+        clientExtensionResults: assertion.getClientExtensionResults(),
+      });
+
+      // 5. 設定登入狀態
+      loginWithFido2Response(result);
+      navigate(from, { replace: true });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Passkey 登入失敗';
+      setPasskeyError(msg);
+    } finally {
+      setPasskeyLoading(false);
     }
   };
 
@@ -324,6 +414,35 @@ export function LoginPage() {
                 {isLoading ? <CircularProgress size={24} /> : '登入'}
               </Button>
             </form>
+          )}
+
+          {/* Passkey 登入 */}
+          {!isRegisterMode && fido2Enabled && (
+            <>
+              <Divider sx={{ my: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  或
+                </Typography>
+              </Divider>
+
+              {passkeyError && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPasskeyError(null)}>
+                  {passkeyError}
+                </Alert>
+              )}
+
+              <Button
+                fullWidth
+                variant="outlined"
+                size="large"
+                startIcon={passkeyLoading ? <CircularProgress size={20} /> : <KeyIcon />}
+                onClick={handlePasskeyLogin}
+                disabled={passkeyLoading || isLoading}
+                sx={{ py: 1.5 }}
+              >
+                {passkeyLoading ? '請依瀏覽器提示操作...' : '使用 Passkey 登入'}
+              </Button>
+            </>
           )}
 
           <Divider sx={{ my: 2 }} />

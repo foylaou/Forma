@@ -67,6 +67,14 @@ export function FormMatrixField({ field }: FormMatrixFieldProps) {
       name={name}
       control={control}
       defaultValue={{}}
+      rules={{
+        validate: required
+          ? (value) => {
+              const vals = value || {};
+              return (rows.length > 0 && rows.every((r) => vals[r.id])) || '請完成所有列的選擇';
+            }
+          : undefined,
+      }}
       render={({ field: controllerField, fieldState: { error } }) => {
         const values = controllerField.value || {};
 

@@ -4,7 +4,8 @@ export interface UserProfileDto {
   id: string;
   username: string;
   email: string;
-  systemRole: string;
+  roleId?: string;
+  roleName?: string;
   department?: string;
   jobTitle?: string;
   phoneNumber?: string;
@@ -18,7 +19,8 @@ export interface UserListDto {
   id: string;
   username: string;
   email: string;
-  systemRole: string;
+  roleId?: string;
+  roleName?: string;
   department?: string;
   isActive: boolean;
   lastLoginAt?: string;
@@ -40,7 +42,7 @@ export interface ChangePasswordRequest {
 export interface UpdateUserRequest {
   username?: string;
   email?: string;
-  systemRole?: string;
+  roleId?: string;
   department?: string;
   jobTitle?: string;
   phoneNumber?: string;
@@ -51,7 +53,6 @@ export interface GetUsersParams {
   pageNumber?: number;
   pageSize?: number;
   searchTerm?: string;
-  systemRole?: string;
   isActive?: boolean;
   sortBy?: string;
   sortDescending?: boolean;

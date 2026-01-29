@@ -38,6 +38,7 @@ export function FormDateTimeField({ field }: FormDateTimeFieldProps) {
       name={name}
       control={control}
       defaultValue={field.defaultValue ?? ''}
+      rules={{ required: required ? '此欄位為必填' : false }}
       render={({ field: controllerField, fieldState: { error } }) => (
         <Box>
           <FieldLabel label={label} required={required} htmlFor={id} />

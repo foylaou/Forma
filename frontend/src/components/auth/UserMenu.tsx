@@ -1,6 +1,6 @@
 /**
  * UserMenu - 使用者選單組件
- * 顯示使用者資訊，提供登出功能
+ * 顯示使用者資訊，提供個人資料編輯與登出功能
  */
 
 import { useState } from 'react';
@@ -14,19 +14,25 @@ import {
   Avatar,
   Typography,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from '@mui/material';
 import {
   Person as PersonIcon,
   Logout as LogoutIcon,
-  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { ProfileSettings } from '@/components/settings/ProfileSettings';
 
 export function UserMenu() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const open = Boolean(anchorEl);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -41,6 +47,11 @@ export function UserMenu() {
     handleClose();
     await logout();
     navigate('/login');
+  };
+
+  const handleOpenProfile = () => {
+    handleClose();
+    setProfileOpen(true);
   };
 
   if (!user) {
@@ -100,18 +111,11 @@ export function UserMenu() {
 
         <Divider />
 
-        <MenuItem onClick={handleClose}>
+        <MenuItem onClick={handleOpenProfile}>
           <ListItemIcon>
             <PersonIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>個人資料</ListItemText>
-        </MenuItem>
-
-        <MenuItem onClick={handleClose}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>設定</ListItemText>
         </MenuItem>
 
         <Divider />
@@ -123,6 +127,17 @@ export function UserMenu() {
           <ListItemText>登出</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* Profile Dialog */}
+      <Dialog open={profileOpen} onClose={() => setProfileOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>個人資料</DialogTitle>
+        <DialogContent dividers>
+          <ProfileSettings />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProfileOpen(false)}>關閉</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

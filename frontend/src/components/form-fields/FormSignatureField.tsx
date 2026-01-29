@@ -35,6 +35,7 @@ export function FormSignatureField({ field }: FormSignatureFieldProps) {
       name={name}
       control={control}
       defaultValue=""
+      rules={{ required: required ? '此欄位為必填' : false }}
       render={({ field: controllerField, fieldState: { error } }) => {
         const initCanvas = () => {
           const canvas = canvasRef.current;

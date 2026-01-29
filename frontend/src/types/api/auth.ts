@@ -9,7 +9,8 @@ export interface UserDto {
   id: string;
   username: string;
   email: string;
-  systemRole: string;
+  roleName?: string;
+  permissions: number;
   department?: string;
   jobTitle?: string;
   isActive: boolean;
@@ -19,7 +20,8 @@ export interface ProfileDto {
   id: string;
   username: string;
   email: string;
-  systemRole: string;
+  roleName?: string;
+  permissions: number;
   department?: string;
   jobTitle?: string;
   phoneNumber?: string;

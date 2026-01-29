@@ -47,6 +47,11 @@ public class FormConfiguration : IEntityTypeConfiguration<Form>
             .HasForeignKey(f => f.TemplateId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        builder.HasOne(f => f.LockedBy)
+            .WithMany(u => u.LockedForms)
+            .HasForeignKey(f => f.LockedById)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Indexes
         builder.HasIndex(f => f.ProjectId);
         builder.HasIndex(f => f.IsActive);

@@ -21,6 +21,9 @@ export interface FormDto {
   projectSettings?: string;
   canEdit: boolean;
   canDelete: boolean;
+  isLocked: boolean;
+  lockedByUsername?: string;
+  lockedAt?: string;
 }
 
 export interface FormListDto {
@@ -35,6 +38,9 @@ export interface FormListDto {
   createdAt: string;
   createdByUsername: string;
   submissionCount: number;
+  isLocked: boolean;
+  lockedByUsername?: string;
+  lockedAt?: string;
 }
 
 export interface FormVersionDto {

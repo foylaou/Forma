@@ -11,12 +11,12 @@ import {
   Typography,
   Alert,
   Grid,
-  Divider,
 } from '@mui/material';
 import { Person as PersonIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/lib/api/auth';
+import PasskeySettings from "@/components/settings/PasskeySettings.tsx";
 
 interface ProfileFormData {
   department: string;
@@ -56,14 +56,8 @@ export function ProfileSettings() {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        個人資料
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        更新您的個人資訊
-      </Typography>
 
-      <Divider sx={{ mb: 3 }} />
+
 
       {/* User Info Display */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
@@ -76,7 +70,7 @@ export function ProfileSettings() {
             {user?.email}
           </Typography>
           <Typography variant="caption" color="primary">
-            {user?.systemRole === 'SystemAdmin' ? '系統管理員' : '一般使用者'}
+            {user?.roleName || '一般使用者'}
           </Typography>
         </Box>
       </Box>
@@ -149,7 +143,10 @@ export function ProfileSettings() {
           </Button>
         </Box>
       </form>
+
+      <PasskeySettings/>
     </Box>
+
   );
 }
 

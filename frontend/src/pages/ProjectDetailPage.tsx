@@ -25,6 +25,7 @@ import {
   Link,
   Divider,
   Snackbar,
+  Tooltip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,6 +39,8 @@ import {
   PlayArrow as FillIcon,
   Visibility as ViewIcon,
   Link as LinkIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
 import { MainLayout } from '@/components/layout';
@@ -79,10 +82,13 @@ interface FormCardProps {
   canEdit: boolean;
   canPublish: boolean;
   canViewSubmissions: boolean;
+  canLockUnlock: boolean;
   onDelete: (form: FormListDto) => void;
   onClone: (form: FormListDto) => void;
   onPublish: (form: FormListDto) => void;
   onUnpublish: (form: FormListDto) => void;
+  onLock: (form: FormListDto) => void;
+  onUnlock: (form: FormListDto) => void;
 }
 
 function FormCard({
@@ -91,10 +97,13 @@ function FormCard({
   canEdit,
   canPublish,
   canViewSubmissions,
+  canLockUnlock,
   onDelete,
   onClone,
   onPublish,
   onUnpublish,
+  onLock,
+  onUnlock,
 }: FormCardProps) {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -130,6 +139,11 @@ function FormCard({
             <FormIcon />
           </Avatar>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {form.isLocked && (
+              <Tooltip title={`已鎖定${form.lockedByUsername ? ` (${form.lockedByUsername})` : ''}`}>
+                <LockIcon fontSize="small" color="warning" />
+              </Tooltip>
+            )}
             <Chip
               label={getFormStatusText(form.isPublished, form.isActive)}
               size="small"
@@ -208,7 +222,7 @@ function FormCard({
           </MenuItem>
         )}
         {(form.isPublished || (canViewSubmissions && form.submissionCount > 0)) && <Divider />}
-        {canEdit && (
+        {canEdit && (!form.isLocked || canLockUnlock) && (
           <MenuItem onClick={() => { handleMenuClose(); handleEditForm(); }}>
             <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
             <ListItemText>編輯</ListItemText>
@@ -220,20 +234,32 @@ function FormCard({
             <ListItemText>複製</ListItemText>
           </MenuItem>
         )}
-        {canPublish && form.isActive && !form.isPublished && (
+        {canPublish && form.isActive && !form.isPublished && (!form.isLocked || canLockUnlock) && (
           <MenuItem onClick={() => { handleMenuClose(); onPublish(form); }}>
             <ListItemIcon><PublishIcon fontSize="small" /></ListItemIcon>
             <ListItemText>發布</ListItemText>
           </MenuItem>
         )}
-        {canPublish && form.isActive && form.isPublished && (
+        {canPublish && form.isActive && form.isPublished && (!form.isLocked || canLockUnlock) && (
           <MenuItem onClick={() => { handleMenuClose(); onUnpublish(form); }}>
             <ListItemIcon><UnpublishIcon fontSize="small" /></ListItemIcon>
             <ListItemText>下架</ListItemText>
           </MenuItem>
         )}
+        {canLockUnlock && !form.isLocked && (
+          <MenuItem onClick={() => { handleMenuClose(); onLock(form); }}>
+            <ListItemIcon><LockIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>鎖定</ListItemText>
+          </MenuItem>
+        )}
+        {canLockUnlock && form.isLocked && (
+          <MenuItem onClick={() => { handleMenuClose(); onUnlock(form); }}>
+            <ListItemIcon><LockOpenIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>解鎖</ListItemText>
+          </MenuItem>
+        )}
         {canEdit && <Divider />}
-        {canEdit && (
+        {canEdit && !form.isLocked && (
           <MenuItem onClick={() => { handleMenuClose(); onDelete(form); }} sx={{ color: 'error.main' }}>
             <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
             <ListItemText>刪除</ListItemText>
@@ -287,6 +313,8 @@ export function ProjectDetailPage() {
   const canEditForm = hasPermission(userRole, 'edit_form');
   const canPublishForm = hasPermission(userRole, 'publish_form');
   const canViewSubmissions = hasPermission(userRole, 'view_submissions');
+  // LockUnlockForms = 1n << 33n (需要 BigInt 做位元運算)
+  const canLockUnlock = !!user && (BigInt(user.permissions) & (1n << 33n)) !== 0n;
 
   useEffect(() => {
     if (projectId) {
@@ -358,6 +386,24 @@ export function ProjectDetailPage() {
       loadProjectData();
     } catch (err) {
       console.error('Failed to clone form:', err);
+    }
+  };
+
+  const handleLockForm = async (form: FormListDto) => {
+    try {
+      await formsApi.lockForm(form.id);
+      loadProjectData();
+    } catch (err) {
+      console.error('Failed to lock form:', err);
+    }
+  };
+
+  const handleUnlockForm = async (form: FormListDto) => {
+    try {
+      await formsApi.unlockForm(form.id);
+      loadProjectData();
+    } catch (err) {
+      console.error('Failed to unlock form:', err);
     }
   };
 
@@ -457,10 +503,13 @@ export function ProjectDetailPage() {
                 canEdit={canEditForm}
                 canPublish={canPublishForm}
                 canViewSubmissions={canViewSubmissions}
+                canLockUnlock={canLockUnlock}
                 onDelete={handleDeleteForm}
                 onClone={handleCloneForm}
                 onPublish={handlePublishForm}
                 onUnpublish={handleUnpublishForm}
+                onLock={handleLockForm}
+                onUnlock={handleUnlockForm}
               />
             </Grid>
           ))}

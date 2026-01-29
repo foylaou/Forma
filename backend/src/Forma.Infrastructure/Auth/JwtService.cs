@@ -47,7 +47,7 @@ public class JwtService : IJwtService
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(ClaimTypes.Name, user.Username),
-            new(ClaimTypes.Role, user.SystemRole.ToString()),
+            new("permissions", (user.Role?.PermissionValue ?? 0).ToString()),
             new("uid", user.Id.ToString())
         };
 

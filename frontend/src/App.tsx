@@ -12,10 +12,11 @@ import { FormSubmitPage } from './pages/FormSubmitPage';
 import { PublicFormSubmitPage } from './pages/PublicFormSubmitPage';
 import { FormSubmissionsPage } from './pages/FormSubmissionsPage';
 import { ProjectReportsPage } from './pages/ProjectReportsPage';
-import { SettingsPage } from './pages/SettingsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { OrganizationsPage } from './pages/OrganizationsPage';
 import { TemplatesPage } from './pages/TemplatesPage';
+import { SystemSettingsPage } from './pages/SystemSettingsPage';
+import { ReportTestPage } from './pages/ReportTestPage';
 import { ProtectedRoute } from './components/auth';
 import { AppInitializer } from './components/AppInitializer';
 import { NetworkIndicator } from './components/common/NetworkIndicator';
@@ -78,14 +79,6 @@ export default function App() {
             }
           />
           <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/projects"
             element={
               <ProtectedRoute>
@@ -106,6 +99,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <TemplatesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/system-settings"
+            element={
+              <ProtectedRoute>
+                <SystemSettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dev/report-test"
+            element={
+              <ProtectedRoute>
+                <ReportTestPage />
               </ProtectedRoute>
             }
           />

@@ -28,6 +28,7 @@ export function FormNumberField({ field }: FormNumberFieldProps) {
         name={name}
         control={control}
         defaultValue={field.defaultValue ?? (min ?? 0)}
+        rules={{ required: required ? '此欄位為必填' : false }}
         render={({ field: controllerField, fieldState: { error } }) => (
           <Box sx={{ width: '100%' }}>
             <FieldLabel label={label} required={required} />
@@ -65,6 +66,7 @@ export function FormNumberField({ field }: FormNumberFieldProps) {
       name={name}
       control={control}
       defaultValue={field.defaultValue ?? ''}
+      rules={{ required: required ? '此欄位為必填' : false }}
       render={({ field: controllerField, fieldState: { error } }) => (
         <Box>
           <FieldLabel label={label} required={required} htmlFor={id} />

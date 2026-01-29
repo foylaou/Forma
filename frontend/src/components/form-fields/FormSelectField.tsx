@@ -46,6 +46,7 @@ export function FormSelectField({ field }: FormSelectFieldProps) {
         name={name}
         control={control}
         defaultValue={field.defaultValue ?? ''}
+        rules={{ required: required ? '此欄位為必填' : false }}
         render={({ field: controllerField, fieldState: { error } }) => (
           <Box>
             <FieldLabel label={label} required={required} />
@@ -116,6 +117,11 @@ export function FormSelectField({ field }: FormSelectFieldProps) {
         name={name}
         control={control}
         defaultValue={field.defaultValue ?? []}
+        rules={{
+          validate: required
+            ? (value) => (Array.isArray(value) && value.length > 0) || '此欄位為必填'
+            : undefined,
+        }}
         render={({ field: controllerField, fieldState: { error } }) => {
           const selectedValues = Array.isArray(controllerField.value) ? controllerField.value : [];
 
@@ -213,6 +219,14 @@ export function FormSelectField({ field }: FormSelectFieldProps) {
       name={name}
       control={control}
       defaultValue={field.defaultValue ?? (isMultiple ? [] : '')}
+      rules={{
+        validate: required
+          ? (value) => {
+              if (isMultiple) return (Array.isArray(value) && value.length > 0) || '此欄位為必填';
+              return (value !== '' && value !== undefined && value !== null) || '此欄位為必填';
+            }
+          : undefined,
+      }}
       render={({ field: controllerField, fieldState: { error } }) => (
         <Box>
           <FieldLabel label={label} required={required} />

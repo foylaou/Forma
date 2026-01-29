@@ -49,6 +49,14 @@ export const formsApi = {
   getFormVersions: (id: string) =>
     apiClient.get<FormVersionDto[]>(`/forms/${id}/versions`),
 
+  // 鎖定表單
+  lockForm: (id: string) =>
+    apiClient.post<FormDto>(`/forms/${id}/lock`),
+
+  // 解鎖表單
+  unlockForm: (id: string) =>
+    apiClient.post<FormDto>(`/forms/${id}/unlock`),
+
   // 取得公開表單（不需登入）
   getPublicForm: (id: string) =>
     apiClient.getPublic<FormDto>(`/public/forms/${id}`),

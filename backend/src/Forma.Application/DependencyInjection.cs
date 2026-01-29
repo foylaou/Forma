@@ -38,6 +38,8 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IFileManagementService, FileManagementService>();
         services.AddScoped<ISystemSettingService, SystemSettingService>();
+        services.AddScoped<IPasswordPolicyService, PasswordPolicyService>();
+        services.AddScoped<IFido2Service, Fido2Service>();
 
         return services;
     }

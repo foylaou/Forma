@@ -21,9 +21,14 @@ public class ProfileDto
     public string Email { get; set; } = string.Empty;
 
     /// <summary>
-    /// 系統角色
+    /// 角色名稱
     /// </summary>
-    public string SystemRole { get; set; } = string.Empty;
+    public string? RoleName { get; set; }
+
+    /// <summary>
+    /// 權限值
+    /// </summary>
+    public long Permissions { get; set; }
 
     /// <summary>
     /// 部門
@@ -77,9 +82,14 @@ public class UserDto
     public string Email { get; set; } = string.Empty;
 
     /// <summary>
-    /// 系統角色
+    /// 角色名稱
     /// </summary>
-    public string SystemRole { get; set; } = string.Empty;
+    public string? RoleName { get; set; }
+
+    /// <summary>
+    /// 權限值
+    /// </summary>
+    public long Permissions { get; set; }
 
     /// <summary>
     /// 部門

@@ -57,9 +57,25 @@ public class Form : AuditableEntity
     /// </summary>
     public FormAccessControl AccessControl { get; set; } = FormAccessControl.Private;
 
+    /// <summary>
+    /// 是否已鎖定
+    /// </summary>
+    public bool IsLocked { get; set; }
+
+    /// <summary>
+    /// 鎖定人 ID
+    /// </summary>
+    public Guid? LockedById { get; set; }
+
+    /// <summary>
+    /// 鎖定時間
+    /// </summary>
+    public DateTime? LockedAt { get; set; }
+
     // Navigation Properties
     public virtual Project Project { get; set; } = null!;
     public virtual User CreatedBy { get; set; } = null!;
+    public virtual User? LockedBy { get; set; }
     public virtual FormTemplate? Template { get; set; }
     public virtual ICollection<FormSubmission> Submissions { get; set; } = new List<FormSubmission>();
     public virtual ICollection<FormPermission> Permissions { get; set; } = new List<FormPermission>();
