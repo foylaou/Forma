@@ -55,9 +55,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 
 WORKDIR /app
 
-# Create non-root user for security
-RUN addgroup --system --gid 1001 forma && \
-    adduser --system --uid 1001 --ingroup forma forma
+# Create non-root user for security (Ubuntu-based image)
+RUN groupadd --system --gid 1001 forma && \
+    useradd --system --uid 1001 --gid forma --shell /bin/false forma
 
 # Copy published backend
 COPY --from=backend-build /app/publish ./
@@ -81,7 +81,7 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
+    CMD curl --fail --silent http://localhost:8080/api/health || exit 1
 
 # Start application
 ENTRYPOINT ["dotnet", "Forma.API.dll"]
