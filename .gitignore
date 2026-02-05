@@ -70,8 +70,10 @@ x86/
 bld/
 [Bb]in/
 [Oo]bj/
-[Ll]og/
-[Ll]ogs/
+# Log directories (but not Features/Logs source code)
+/[Ll]og/
+/[Ll]ogs/
+!src/**/Logs/
 
 # ---------------------------------
 # Test Results
