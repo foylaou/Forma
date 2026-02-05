@@ -1,0 +1,55 @@
+version: '3.8'
+
+# ===========================================
+# 開發環境配置
+# 使用: docker compose -f docker-compose.dev.yml up
+# ===========================================
+
+services:
+  # ---------------------------------
+  # Backend API (熱重載)
+  # ---------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: backend-dev
+    container_name: forma-api-dev
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/forma-dev.db
+    volumes:
+      - ./src:/src:cached
+      - forma-dev-data:/app/data
+      - forma-dev-uploads:/app/uploads
+    working_dir: /src/Forma.API
+    command: dotnet watch run --project Forma.API.csproj
+    restart: unless-stopped
+
+  # ---------------------------------
+  # Frontend (Vite Dev Server)
+  # ---------------------------------
+  web:
+    image: node:22-alpine
+    container_name: forma-web-dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    volumes:
+      - ./src/Forma.Web:/app:cached
+      - /app/node_modules
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install && pnpm dev --host"
+    restart: unless-stopped
+    depends_on:
+      - api
+
+volumes:
+  forma-dev-data:
+    driver: local
+  forma-dev-uploads:
+    driver: local

@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # ===========================================
+  # Forma API + Web
+  # ===========================================
+  forma:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: forma:latest
+    container_name: forma-app
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/forma.db
+    volumes:
+      - forma-data:/app/data
+      - forma-uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ===========================================
+  # PostgreSQL (可選 - 生產環境建議使用)
+  # ===========================================
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: forma-db
+  #   environment:
+  #     POSTGRES_USER: forma
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forma_secret}
+  #     POSTGRES_DB: forma
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U forma"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  forma-data:
+    driver: local
+  forma-uploads:
+    driver: local
+  # postgres-data:
+  #   driver: local

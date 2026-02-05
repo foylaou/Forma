@@ -1,0 +1,45 @@
+# ===========================================
+# Docker Ignore
+# ===========================================
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+.vs/
+*.suo
+*.user
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# Frontend
+src/Forma.Web/node_modules/
+src/Forma.Web/dist/
+
+# Tests
+tests/
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# CI/CD
+.github/
+
+# Misc
+.claude/
+.gemini/
+*.log
+*.tmp
