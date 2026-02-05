@@ -17,44 +17,47 @@
 # ---------------------------------
 # Frontend (React/Node.js)
 # ---------------------------------
-frontend/node_modules/
-frontend/dist/
-frontend/build/
-frontend/.env
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-frontend/.pnpm-debug.log*
+src/Forma.Web/node_modules/
+src/Forma.Web/dist/
+src/Forma.Web/build/
+src/Forma.Web/.env
+src/Forma.Web/.env.local
+src/Forma.Web/.env.development.local
+src/Forma.Web/.env.test.local
+src/Forma.Web/.env.production.local
+src/Forma.Web/npm-debug.log*
+src/Forma.Web/yarn-debug.log*
+src/Forma.Web/yarn-error.log*
+src/Forma.Web/.pnpm-debug.log*
+src/Forma.Web/pnpm-lock.yaml
 
 # ---------------------------------
 # Backend (.NET)
 # ---------------------------------
-backend/**/bin/
-backend/**/obj/
-backend/**/.vs/
-backend/**/*.user
-backend/**/*.rsuser
-backend/**/launchSettings.json
-backend/**/*.db
-backend/**/*.db-shm
-backend/**/*.db-wal
-backend/**/bin\\Debug/
-backend/**/obj\\Debug/
+src/**/bin/
+src/**/obj/
+src/**/.vs/
+src/**/*.user
+src/**/*.rsuser
+src/**/launchSettings.json
+src/**/*.db
+src/**/*.db-shm
+src/**/*.db-wal
+tests/**/bin/
+tests/**/obj/
 
 # Always track Migrations
-!backend/src/Forma.Infrastructure/Migrations/
+!src/Forma.Infrastructure/Migrations/
 
 # NuGet
-backend/**/*.nupkg
-backend/**/packages/
-backend/**/.nuget/
+src/**/*.nupkg
+src/**/packages/
+src/**/.nuget/
+tests/**/*.nupkg
+tests/**/packages/
 
 # User secrets
-backend/**/secrets.json
+src/**/secrets.json
 
 # ---------------------------------
 # Build outputs
