@@ -46,7 +46,7 @@ RUN dotnet restore src/Forma.API/Forma.API.csproj
 COPY src/ src/
 
 # Build and publish
-RUN dotnet publish src/Forma.API/Forma.API.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish src/Forma.API/Forma.API.csproj -c Release -o /app/publish
 
 # ---------------------------------
 # Stage 3: Runtime
