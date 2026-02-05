@@ -5,7 +5,7 @@
 # ---------------------------------
 # Backend Development (Hot Reload)
 # ---------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS backend-dev
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-dev
 
 WORKDIR /src
 

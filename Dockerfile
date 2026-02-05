@@ -27,7 +27,7 @@ RUN pnpm build
 # ---------------------------------
 # Stage 2: Build Backend
 # ---------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS backend-build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 
 WORKDIR /src
 
@@ -51,7 +51,7 @@ RUN dotnet publish src/Forma.API/Forma.API.csproj -c Release -o /app/publish --n
 # ---------------------------------
 # Stage 3: Runtime
 # ---------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 
 WORKDIR /app
 
