@@ -79,15 +79,15 @@ async function registerPasskey(deviceName?: string): Promise<boolean> {
 // Parse server options to browser-compatible format
 function parseCreationOptions(options: PublicKeyCredentialCreationOptions): PublicKeyCredentialCreationOptions {
   // The server returns base64url-encoded buffers; browser API expects ArrayBuffers
-  const parsed = { ...options } as Record<string, unknown>;
+  const parsed = { ...options } as unknown as Record<string, unknown>;
 
   // challenge
-  if (typeof (options as Record<string, unknown>).challenge === 'string') {
+  if (typeof (options as unknown as Record<string, unknown>).challenge === 'string') {
     parsed.challenge = base64UrlToBuffer(options.challenge as unknown as string);
   }
 
   // user.id
-  const user = options.user as Record<string, unknown>;
+  const user = options.user as unknown as Record<string, unknown>;
   if (user && typeof user.id === 'string') {
     parsed.user = { ...user, id: base64UrlToBuffer(user.id as string) };
   }
