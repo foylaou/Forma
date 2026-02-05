@@ -39,8 +39,8 @@ COPY src/Forma.Application/Forma.Application.csproj src/Forma.Application/
 COPY src/Forma.Infrastructure/Forma.Infrastructure.csproj src/Forma.Infrastructure/
 COPY src/Forma.API/Forma.API.csproj src/Forma.API/
 
-# Restore dependencies
-RUN dotnet restore
+# Restore dependencies (only API project, skip tests)
+RUN dotnet restore src/Forma.API/Forma.API.csproj
 
 # Copy all source code
 COPY src/ src/
