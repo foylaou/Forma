@@ -80,6 +80,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
+// 靜態檔案 (wwwroot)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 // Security Headers
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -87,6 +91,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// SPA fallback: 非 API 路由回傳 index.html
+app.MapFallbackToFile("index.html");
 
 var urls = builder.Configuration["ASPNETCORE_URLS"]
          ?? builder.Configuration["applicationUrl"]
