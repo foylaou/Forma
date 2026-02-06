@@ -3,7 +3,7 @@
  * 根據欄位類型自動選擇對應的組件進行渲染
  */
 
-import type { Field, PanelField } from '@/types/form';
+import type { Field } from '@/types/form';
 import { FormTextField } from './FormTextField';
 import { FormNumberField } from './FormNumberField';
 import { FormSelectField } from './FormSelectField';

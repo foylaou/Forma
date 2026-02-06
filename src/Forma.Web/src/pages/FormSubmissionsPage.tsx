@@ -263,7 +263,7 @@ async function downloadReportForSubmission(
 ) {
   const reportField = findDownloadReportField(schema);
   if (!reportField) return;
-  const properties = (reportField.properties ?? {}) as DownloadReportFieldProperties;
+  const properties = ('properties' in reportField ? (reportField as unknown as { properties: unknown }).properties ?? {} : {}) as DownloadReportFieldProperties;
   const reportDate = reportDownloadedAt ? new Date(reportDownloadedAt) : undefined;
   const { generateReport } = await import('@/components/form-fields/report/generateReport');
   await generateReport({ schema, values: submissionData, properties, logoUrl, reportDate });

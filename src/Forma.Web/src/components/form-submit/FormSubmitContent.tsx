@@ -35,7 +35,7 @@ import { CardModePreview } from '@/components/form-preview';
 import { resolveTheme, parseProjectTheme } from '@/hooks/useFormTheme';
 import type { ResolvedTheme } from '@/hooks/useFormTheme';
 import type { FormDto } from '@/types/api/forms';
-import type { Field, FormSchema, FormPage, PageNavigationRule, ConditionalOperator } from '@/types/form';
+import type { Field, FormSchema, PageNavigationRule } from '@/types/form';
 import { evaluateOperator, isFieldVisible, isPageVisible } from '@/lib/conditionEvaluator';
 
 // ---- Sub-components ----
