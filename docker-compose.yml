@@ -5,10 +5,7 @@ services:
   # Forma API + Web
   # ===========================================
   forma:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: forma:latest
+    image: ghcr.io/foylaou/forma:latest
     container_name: forma-app
     ports:
       - "8080:8080"
