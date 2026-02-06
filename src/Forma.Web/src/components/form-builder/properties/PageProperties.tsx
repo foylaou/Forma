@@ -2,6 +2,7 @@
  * PageProperties - 頁面屬性編輯器
  */
 
+import { useMemo } from 'react';
 import {
   Box,
   TextField,
@@ -22,7 +23,8 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useFormBuilderStore, useSelectedPage } from '@/stores/formBuilderStore';
-import type { PageNavigationRule, ConditionalOperator } from '@/types/form';
+import { ConditionalEditor } from './common/ConditionalEditor';
+import type { PageNavigationRule, ConditionalOperator, Conditional } from '@/types/form';
 
 const generateRuleId = () => `rule-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -108,6 +110,20 @@ export function PageProperties() {
       />
       <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 3, ml: 6 }}>
         關閉後，使用者將無法返回前一頁
+      </Typography>
+
+      {/* Default Visible */}
+      <FormControlLabel
+        control={
+          <Switch
+            checked={page.visible !== false}
+            onChange={(e) => updatePage(page.id, { visible: e.target.checked })}
+          />
+        }
+        label="預設顯示"
+      />
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 3, ml: 6 }}>
+        關閉後，此頁面預設隱藏（可搭配條件顯示）
       </Typography>
 
       <Divider sx={{ my: 2 }} />
@@ -219,6 +235,56 @@ export function PageProperties() {
           </Typography>
         )}
       </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Page Visibility Condition */}
+      <PageVisibilityCondition />
+    </Box>
+  );
+}
+
+// ============================================================================
+// Page Visibility Condition Sub-component
+// ============================================================================
+
+function PageVisibilityCondition() {
+  const page = useSelectedPage();
+  const { schema, updatePage } = useFormBuilderStore();
+
+  // All fields from ALL pages (page visibility may depend on previous pages)
+  const allFields = useMemo(() => {
+    return schema.pages
+      .flatMap((p) => p.fields)
+      .filter(
+        (f) => !['panel', 'paneldynamic', 'html', 'section'].includes(f.type)
+      );
+  }, [schema.pages]);
+
+  if (!page) return null;
+
+  const handleChange = (conditional: Conditional) => {
+    updatePage(page.id, { visibilityCondition: conditional });
+  };
+
+  const handleClear = () => {
+    updatePage(page.id, { visibilityCondition: undefined });
+  };
+
+  return (
+    <Box sx={{ mb: 2 }}>
+      <Typography variant="subtitle2" gutterBottom>
+        頁面顯示條件
+      </Typography>
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+        設定此頁面何時顯示或隱藏
+      </Typography>
+      <ConditionalEditor
+        conditional={page.visibilityCondition}
+        allFields={allFields}
+        onChange={handleChange}
+        onClear={handleClear}
+      />
     </Box>
   );
 }

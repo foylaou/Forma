@@ -34,8 +34,11 @@ src/Forma.Web/pnpm-lock.yaml
 # ---------------------------------
 # Backend (.NET)
 # ---------------------------------
-src/**/bin/
-src/**/obj/
+src/**/[Bb]in/
+src/**/[Oo]bj/
+# 排除帶有反斜線的特殊路徑 (處理跨平台工具產生的異常資料夾)
+src/**/bin\\*/
+src/**/obj\\*/
 src/**/.vs/
 src/**/*.user
 src/**/*.rsuser

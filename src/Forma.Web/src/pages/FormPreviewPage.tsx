@@ -3,7 +3,7 @@
  * Supports multi-page navigation and card mode for mobile
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -34,71 +34,31 @@ import { FieldRenderer } from '@/components/form-fields';
 import { CardModePreview } from '@/components/form-preview';
 import { UserMenu } from '@/components/auth';
 import { useFormBuilderStore } from '@/stores/formBuilderStore';
-import type { Field, FormSchema, PageNavigationRule, ConditionalOperator } from '@/types/form';
+import { evaluateOperator, isFieldVisible, isPageVisible } from '@/lib/conditionEvaluator';
+import type { Field, FormSchema, PageNavigationRule } from '@/types/form';
 import type { ResolvedTheme } from '@/hooks/useFormTheme';
 import { useFormTheme, parseProjectTheme } from '@/hooks/useFormTheme';
 import { projectsApi } from '@/lib/api/projects';
 
-// Evaluate a navigation rule condition
-function evaluateCondition(
-  fieldValue: unknown,
-  operator: ConditionalOperator,
-  ruleValue: string | number | boolean
-): boolean {
-  const strValue = String(fieldValue ?? '');
-  const numValue = Number(fieldValue);
-  const ruleStrValue = String(ruleValue);
-  const ruleNumValue = Number(ruleValue);
-
-  switch (operator) {
-    case 'equals':
-      return strValue === ruleStrValue;
-    case 'notEquals':
-      return strValue !== ruleStrValue;
-    case 'contains':
-      return strValue.includes(ruleStrValue);
-    case 'notContains':
-      return !strValue.includes(ruleStrValue);
-    case 'gt':
-      return !isNaN(numValue) && numValue > ruleNumValue;
-    case 'gte':
-      return !isNaN(numValue) && numValue >= ruleNumValue;
-    case 'lt':
-      return !isNaN(numValue) && numValue < ruleNumValue;
-    case 'lte':
-      return !isNaN(numValue) && numValue <= ruleNumValue;
-    case 'isEmpty':
-      return strValue === '' || fieldValue === null || fieldValue === undefined;
-    case 'isNotEmpty':
-      return strValue !== '' && fieldValue !== null && fieldValue !== undefined;
-    case 'in':
-      return ruleStrValue.split(',').map(s => s.trim()).includes(strValue);
-    case 'notIn':
-      return !ruleStrValue.split(',').map(s => s.trim()).includes(strValue);
-    case 'startsWith':
-      return strValue.startsWith(ruleStrValue);
-    case 'endsWith':
-      return strValue.endsWith(ruleStrValue);
-    default:
-      return false;
-  }
-}
-
 // Progress tracker component
-function ProgressTracker({ fields, control }: { fields: Field[]; control: unknown }) {
+function ProgressTracker({ fields, control, watchValues }: { fields: Field[]; control: unknown; watchValues?: Record<string, unknown> }) {
   const [progress, setProgress] = useState(0);
   const [filledCount, setFilledCount] = useState(0);
   const values = useWatch({ control: control as never });
 
   useEffect(() => {
-    if (fields.length === 0) {
+    // Filter out hidden fields
+    const visibleFields = watchValues
+      ? fields.filter((f) => isFieldVisible(f, watchValues))
+      : fields;
+    if (visibleFields.length === 0) {
       setProgress(100);
       setFilledCount(0);
       return;
     }
 
     let filled = 0;
-    fields.forEach((field) => {
+    visibleFields.forEach((field) => {
       const value = values?.[field.name];
       if (value !== undefined && value !== null && value !== '' &&
           !(Array.isArray(value) && value.length === 0)) {
@@ -107,8 +67,8 @@ function ProgressTracker({ fields, control }: { fields: Field[]; control: unknow
     });
 
     setFilledCount(filled);
-    setProgress(Math.round((filled / fields.length) * 100));
-  }, [values, fields]);
+    setProgress(Math.round((filled / visibleFields.length) * 100));
+  }, [values, fields, watchValues]);
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -151,21 +111,40 @@ function ClassicModeContent({
   resolvedTheme: ResolvedTheme;
 }) {
   const navigate = useNavigate();
-  const totalPages = schema.pages.length;
-  const currentPage = schema.pages[currentPageIndex];
-  const isFirstPage = currentPageIndex === 0;
-  const isLastPage = currentPageIndex === totalPages - 1;
-
-  const allFields = schema.pages.flatMap((page) => page.fields);
-  const inputFields = allFields.filter(f =>
-    !['panel', 'paneldynamic', 'html', 'section', 'hidden'].includes(f.type)
-  );
-
-  const showProgressBar = schema.settings?.showProgressBar ?? true;
 
   const methods = useForm({
     mode: 'onChange',
   });
+
+  const formValues = methods.watch();
+
+  // Compute visible pages based on visibilityCondition
+  const visiblePages = useMemo(() => {
+    return schema.pages.filter((page) =>
+      isPageVisible(page, formValues)
+    );
+  }, [schema.pages, formValues]);
+
+  const totalPages = visiblePages.length;
+  const currentPage = visiblePages[currentPageIndex] ?? visiblePages[0];
+  const isFirstPage = currentPageIndex === 0;
+  const isLastPage = currentPageIndex === totalPages - 1;
+
+  // Ensure currentPageIndex stays in bounds
+  useEffect(() => {
+    if (currentPageIndex >= totalPages && totalPages > 0) {
+      setCurrentPageIndex(totalPages - 1);
+    }
+  }, [currentPageIndex, totalPages, setCurrentPageIndex]);
+
+  // All visible input fields for progress bar
+  const inputFields = useMemo(() => {
+    return visiblePages
+      .flatMap((page) => page.fields)
+      .filter((f) => !['panel', 'paneldynamic', 'html', 'section', 'hidden', 'welcome', 'ending', 'downloadreport'].includes(f.type));
+  }, [visiblePages]);
+
+  const showProgressBar = schema.settings?.showProgressBar ?? true;
 
   const handleSubmit = () => {
     const data = methods.getValues();
@@ -186,15 +165,14 @@ function ClassicModeContent({
     }
   };
 
-  const formValues = methods.watch();
-
   const findTargetPageIndex = (rules: PageNavigationRule[] | undefined): number | null => {
     if (!rules || rules.length === 0) return null;
 
     for (const rule of rules) {
       const fieldValue = formValues[rule.fieldName];
-      if (evaluateCondition(fieldValue, rule.operator, rule.value)) {
-        const targetIndex = schema.pages.findIndex(p => p.id === rule.targetPageId);
+      if (evaluateOperator(fieldValue, rule.operator, rule.value)) {
+        // Find target in visiblePages
+        const targetIndex = visiblePages.findIndex(p => p.id === rule.targetPageId);
         if (targetIndex !== -1) {
           return targetIndex;
         }
@@ -252,7 +230,7 @@ function ClassicModeContent({
         {totalPages > 1 && (
           <Box sx={{ mb: 4 }}>
             <Stepper activeStep={currentPageIndex} alternativeLabel>
-              {schema.pages.map((page, index) => (
+              {visiblePages.map((page, index) => (
                 <Step key={page.id}>
                   <StepLabel
                     sx={{ cursor: 'pointer' }}
@@ -271,7 +249,7 @@ function ClassicModeContent({
 
         {/* Progress Bar */}
         {showProgressBar && (
-          <ProgressTracker fields={inputFields} control={methods.control} />
+          <ProgressTracker fields={inputFields} control={methods.control} watchValues={formValues} />
         )}
 
         {/* Form Fields */}
@@ -310,11 +288,14 @@ function ClassicModeContent({
                     </Typography>
                   </Box>
                 ) : (
-                  currentPage.fields.map((field) => (
-                    <Box key={field.id} sx={{ mb: 3 }}>
-                      <FieldRenderer field={field} allFieldsRequired={allFieldsRequired} schema={schema} />
-                    </Box>
-                  ))
+                  currentPage.fields.map((field) => {
+                    if (!isFieldVisible(field, formValues)) return null;
+                    return (
+                      <Box key={field.id} sx={{ mb: 3 }}>
+                        <FieldRenderer field={field} allFieldsRequired={allFieldsRequired} schema={schema} />
+                      </Box>
+                    );
+                  })
                 )}
               </Box>
             )}
@@ -373,7 +354,7 @@ function ClassicModeContent({
         </FormProvider>
 
         {/* Empty State */}
-        {allFields.length === 0 && (
+        {schema.pages.flatMap(p => p.fields).length === 0 && (
           <Box
             sx={{
               py: 8,

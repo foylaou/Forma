@@ -3,7 +3,7 @@
  * 一次顯示一個問題，適合手機/平板使用
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -20,6 +20,7 @@ import {
 import { useForm, FormProvider } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FieldRenderer } from '@/components/form-fields';
+import { isFieldVisible, isPageVisible } from '@/lib/conditionEvaluator';
 import type { FormSchema } from '@/types/form';
 import type { ResolvedTheme } from '@/hooks/useFormTheme';
 
@@ -30,28 +31,38 @@ interface CardModePreviewProps {
 }
 
 export function CardModePreview({ schema, onSubmit, resolvedTheme }: CardModePreviewProps) {
-  // Flatten all fields from all pages
-  const allFields = schema.pages.flatMap((page) => page.fields);
+  const methods = useForm({
+    mode: 'onChange',
+  });
 
-  // Filter out non-renderable fields (panels, sections, hidden)
-  const questionFields = allFields.filter(
-    (f) => !['panel', 'paneldynamic', 'section', 'hidden', 'downloadreport'].includes(f.type)
-  );
+  const watchedValues = methods.watch();
+
+  // Flatten all fields from visible pages, filter hidden fields
+  const questionFields = useMemo(() => {
+    const visiblePages = schema.pages.filter((page) =>
+      isPageVisible(page, watchedValues)
+    );
+    const allFields = visiblePages.flatMap((page) => page.fields);
+    return allFields
+      .filter((f) => !['panel', 'paneldynamic', 'section', 'hidden', 'downloadreport'].includes(f.type))
+      .filter((f) => isFieldVisible(f, watchedValues));
+  }, [schema.pages, watchedValues]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
 
   const totalQuestions = questionFields.length;
-  const currentField = questionFields[currentIndex];
+  // Keep currentIndex in bounds when fields become hidden
+  const safeIndex = Math.min(currentIndex, Math.max(0, totalQuestions - 1));
+  if (safeIndex !== currentIndex && totalQuestions > 0) {
+    setCurrentIndex(safeIndex);
+  }
+  const currentField = questionFields[safeIndex];
   const isFirstQuestion = currentIndex === 0;
   const isLastQuestion = currentIndex === totalQuestions - 1;
   const progress = totalQuestions > 0 ? ((currentIndex + 1) / totalQuestions) * 100 : 0;
 
   const allFieldsRequired = schema.settings?.allFieldsRequired ?? false;
-
-  const methods = useForm({
-    mode: 'onChange',
-  });
 
   const handleNext = () => {
     if (isLastQuestion) {

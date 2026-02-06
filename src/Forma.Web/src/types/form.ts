@@ -234,6 +234,10 @@ export interface FormPage {
   allowPrevious?: boolean;
   /** 條件導航規則 */
   navigationRules?: PageNavigationRule[];
+  /** 預設顯示 */
+  visible?: boolean;
+  /** 頁面顯示條件 */
+  visibilityCondition?: Conditional;
 }
 
 /** 表單主題 */

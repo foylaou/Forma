@@ -33,6 +33,8 @@ export function FormDownloadReportField({ field, schema, logoUrl }: FormDownload
       const values = formContext.getValues();
       const { generateReport } = await import('./report/generateReport');
       await generateReport({ schema, values, properties: props, logoUrl });
+      // Record download time in form values for submission
+      formContext.setValue('__reportDownloadedAt', new Date().toISOString());
     } catch (err) {
       console.error('PDF generation failed:', err);
     } finally {

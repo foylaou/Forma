@@ -17,6 +17,7 @@ export interface SubmissionDto {
   reviewedByUsername?: string;
   reviewedAt?: string;
   ipAddress?: string;
+  reportDownloadedAt?: string;
   canEdit: boolean;
   canDelete: boolean;
 }
@@ -30,6 +31,7 @@ export interface SubmissionListDto {
   submittedAt: string;
   status: string;
   reviewedAt?: string;
+  reportDownloadedAt?: string;
 }
 
 // Request DTOs

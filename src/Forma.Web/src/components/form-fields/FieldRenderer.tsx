@@ -121,7 +121,21 @@ export function FieldRenderer({ field, allFieldsRequired, schema, logoUrl }: Fie
       return <FormPanelField field={effectiveField} allFieldsRequired={allFieldsRequired} />;
 
     case 'section':
-      return <FormPanelField field={effectiveField as unknown as PanelField} allFieldsRequired={allFieldsRequired} />;
+      return (
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
+          sx={{
+            py: 1,
+            borderBottom: '2px solid',
+            borderColor: 'primary.main',
+            '& b, & strong': { fontWeight: 700 },
+            '& i, & em': { fontStyle: 'italic' },
+            '& u': { textDecoration: 'underline' },
+          }}
+          dangerouslySetInnerHTML={{ __html: effectiveField.label || effectiveField.name }}
+        />
+      );
 
     case 'paneldynamic':
       return <FormPanelDynamicField field={effectiveField} allFieldsRequired={allFieldsRequired} />;

@@ -156,6 +156,30 @@ public class SubmissionsController : ControllerBase
     }
 
     /// <summary>
+    /// 記錄報告下載時間
+    /// </summary>
+    [HttpPatch("submissions/{id:guid}/report-downloaded")]
+    public async Task<ActionResult> RecordReportDownloaded(Guid id)
+    {
+        try
+        {
+            await _submissionService.RecordReportDownloadedAsync(
+                id,
+                _currentUser.UserId!.Value,
+                _currentUser.IsSystemAdmin);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    /// <summary>
     /// 刪除提交
     /// </summary>
     [HttpDelete("submissions/{id:guid}")]

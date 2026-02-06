@@ -8,8 +8,11 @@ import {
   FormControlLabel,
   Switch,
   Typography,
+  Autocomplete,
+  Chip,
 } from '@mui/material';
 import { useSelectedField, useFormBuilderStore } from '@/stores/formBuilderStore';
+import { fieldTypeDefinitions } from '../../toolbox/fieldTypeDefinitions';
 import { PropertySection } from '../PropertySection';
 
 export function DownloadReportProperties() {
@@ -24,7 +27,13 @@ export function DownloadReportProperties() {
   const dateLabel = properties.dateLabel ?? '日期';
   const buttonText = properties.buttonText ?? '下載報告';
   const showLogo = properties.showLogo ?? true;
-  const excludeFieldTypes = (properties.excludeFieldTypes ?? ['welcome', 'ending', 'downloadreport', 'hidden', 'html']).join(', ');
+  const excludeFieldTypes = properties.excludeFieldTypes ?? ['welcome', 'ending', 'downloadreport', 'hidden', 'html'];
+
+  // Build options for Autocomplete from fieldTypeDefinitions
+  const fieldTypeOptions = fieldTypeDefinitions.map((def) => ({
+    value: def.type,
+    label: def.label,
+  }));
 
   const handleChange = (key: string, value: unknown) => {
     updateField(field.id, {
@@ -87,13 +96,32 @@ export function DownloadReportProperties() {
         />
       </Box>
       <Box sx={{ mb: 2 }}>
-        <TextField
-          label="排除的欄位類型"
-          value={excludeFieldTypes}
-          onChange={(e) => handleChange('excludeFieldTypes', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
-          fullWidth
+        <Autocomplete
+          multiple
           size="small"
-          helperText="以逗號分隔"
+          options={fieldTypeOptions}
+          getOptionLabel={(option) => option.label}
+          isOptionEqualToValue={(option, value) => option.value === value.value}
+          value={excludeFieldTypes.map((t: string) => {
+            const def = fieldTypeOptions.find((o) => o.value === t);
+            return def ?? { value: t, label: t };
+          })}
+          onChange={(_, newValue) => {
+            handleChange('excludeFieldTypes', newValue.map((v) => v.value));
+          }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip
+                {...getTagProps({ index })}
+                key={option.value}
+                label={option.label}
+                size="small"
+              />
+            ))
+          }
+          renderInput={(params) => (
+            <TextField {...params} label="排除的欄位類型" />
+          )}
         />
       </Box>
       <Box sx={{ p: 1.5, backgroundColor: 'info.lighter', borderRadius: 1 }}>

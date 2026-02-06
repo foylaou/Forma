@@ -62,6 +62,11 @@ public class FormSubmission : BaseEntity
     /// </summary>
     public string? IpAddress { get; set; }
 
+    /// <summary>
+    /// 報告下載時間
+    /// </summary>
+    public DateTime? ReportDownloadedAt { get; set; }
+
     // Navigation Properties
     public virtual Form Form { get; set; } = null!;
     public virtual Project Project { get; set; } = null!;

@@ -162,6 +162,7 @@ interface GenerateReportParams {
   values: Record<string, unknown>;
   properties: DownloadReportFieldProperties;
   logoUrl?: string;
+  reportDate?: Date;
 }
 
 /** Strip HTML tags AND decode common HTML entities */
@@ -593,7 +594,7 @@ function RenderFlatItems({
   return <>{elements}</>;
 }
 
-function ReportDocument({ schema, values, properties, logoUrl }: GenerateReportParams) {
+function ReportDocument({ schema, values, properties, logoUrl, reportDate }: GenerateReportParams) {
   const excludeTypes = properties.excludeFieldTypes ?? ['welcome', 'ending', 'downloadreport', 'hidden', 'html'];
   const showDate = properties.showDate ?? true;
   const dateLabel = properties.dateLabel || '日期';
@@ -602,7 +603,7 @@ function ReportDocument({ schema, values, properties, logoUrl }: GenerateReportP
     ? resolveTemplate(properties.coverTitle, values)
     : '報告';
 
-  const now = new Date().toLocaleDateString('zh-TW');
+  const now = (reportDate ?? new Date()).toLocaleDateString('zh-TW');
 
   return (
     <Document>
