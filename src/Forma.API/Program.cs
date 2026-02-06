@@ -88,4 +88,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run("http://localhost:5053");
+var urls = builder.Configuration["ASPNETCORE_URLS"]
+         ?? builder.Configuration["applicationUrl"]
+         ?? "http://localhost:5053";
+app.Run(urls);
