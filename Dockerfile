@@ -30,7 +30,8 @@ RUN pnpm build
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 
 WORKDIR /src
-
+# 安裝Npgsql 驅動程式
+RUN apt-get update && apt-get install -y libgssapi-krb5-2
 # Copy solution and project files
 COPY Forma.sln ./
 COPY src/Forma.Domain/Forma.Domain.csproj src/Forma.Domain/
