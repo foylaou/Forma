@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Forma.Application.Common.Interfaces;
 using Forma.Application.Common.Models;
 using Forma.Application.Features.Submissions.DTOs;
@@ -86,7 +87,8 @@ public class SubmissionService : ISubmissionService
                 SubmittedByUsername = s.SubmittedBy != null ? s.SubmittedBy.Username : null,
                 SubmittedAt = s.SubmittedAt,
                 Status = s.Status.ToString(),
-                ReviewedAt = s.ReviewedAt
+                ReviewedAt = s.ReviewedAt,
+                ReportDownloadedAt = s.ReportDownloadedAt
             })
             .ToListAsync(cancellationToken);
 
@@ -151,6 +153,7 @@ public class SubmissionService : ISubmissionService
             ReviewedByUsername = submission.ReviewedBy?.Username,
             ReviewedAt = submission.ReviewedAt,
             IpAddress = submission.IpAddress,
+            ReportDownloadedAt = submission.ReportDownloadedAt,
             CanEdit = isOwner || isSystemAdmin,
             CanDelete = (isOwner && submission.Status == SubmissionStatus.Draft) || isSystemAdmin
         };
@@ -183,6 +186,20 @@ public class SubmissionService : ISubmissionService
             throw new InvalidOperationException("表單已停用，無法提交");
         }
 
+        // Extract __reportDownloadedAt from submission data
+        DateTime? reportDownloadedAt = null;
+        try
+        {
+            using var doc = JsonDocument.Parse(request.SubmissionData);
+            if (doc.RootElement.TryGetProperty("__reportDownloadedAt", out var rdProp) &&
+                rdProp.ValueKind == JsonValueKind.String &&
+                DateTime.TryParse(rdProp.GetString(), out var rdVal))
+            {
+                reportDownloadedAt = rdVal.ToUniversalTime();
+            }
+        }
+        catch { /* ignore parse errors */ }
+
         var submission = new FormSubmission
         {
             Id = Guid.CreateVersion7(),
@@ -193,7 +210,8 @@ public class SubmissionService : ISubmissionService
             FormVersion = form.Version,
             SubmittedAt = DateTime.UtcNow,
             Status = request.IsDraft ? SubmissionStatus.Draft : SubmissionStatus.Submitted,
-            IpAddress = request.IpAddress
+            IpAddress = request.IpAddress,
+            ReportDownloadedAt = reportDownloadedAt
         };
 
         _context.FormSubmissions.Add(submission);
@@ -238,6 +256,19 @@ public class SubmissionService : ISubmissionService
         submission.SubmissionData = request.SubmissionData;
         submission.UpdatedAt = DateTime.UtcNow;
 
+        // Extract __reportDownloadedAt from submission data
+        try
+        {
+            using var doc = JsonDocument.Parse(request.SubmissionData);
+            if (doc.RootElement.TryGetProperty("__reportDownloadedAt", out var rdProp) &&
+                rdProp.ValueKind == JsonValueKind.String &&
+                DateTime.TryParse(rdProp.GetString(), out var rdVal))
+            {
+                submission.ReportDownloadedAt = rdVal.ToUniversalTime();
+            }
+        }
+        catch { /* ignore parse errors */ }
+
         // 更新狀態
         if (!string.IsNullOrEmpty(request.Status) &&
             Enum.TryParse<SubmissionStatus>(request.Status, true, out var status))
@@ -271,9 +302,36 @@ public class SubmissionService : ISubmissionService
             ReviewedByUsername = submission.ReviewedBy?.Username,
             ReviewedAt = submission.ReviewedAt,
             IpAddress = submission.IpAddress,
+            ReportDownloadedAt = submission.ReportDownloadedAt,
             CanEdit = isOwner || request.IsSystemAdmin,
             CanDelete = isOwner || request.IsSystemAdmin
         };
+    }
+
+    /// <inheritdoc />
+    public async Task RecordReportDownloadedAsync(
+        Guid submissionId,
+        Guid currentUserId,
+        bool isSystemAdmin,
+        CancellationToken cancellationToken = default)
+    {
+        var submission = await _context.FormSubmissions
+            .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken);
+
+        if (submission == null)
+        {
+            throw new KeyNotFoundException("找不到提交記錄");
+        }
+
+        // 權限檢查：提交者本人或系統管理員
+        var isOwner = submission.SubmittedById == currentUserId;
+        if (!isSystemAdmin && !isOwner)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        submission.ReportDownloadedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     /// <inheritdoc />

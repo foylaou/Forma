@@ -507,6 +507,9 @@ namespace Forma.Infrastructure.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ReportDownloadedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone");
 

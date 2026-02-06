@@ -13,6 +13,7 @@ import { getFieldTypeDefinition } from '../toolbox/fieldTypeDefinitions';
 import { BasicProperties } from './common/BasicProperties';
 import { LayoutProperties } from './common/LayoutProperties';
 import { ValidationProperties } from './common/ValidationProperties';
+import { ConditionalProperties } from './common/ConditionalProperties';
 
 // Type-specific Properties
 import { TextProperties } from './type-specific/TextProperties';
@@ -213,6 +214,9 @@ export function PropertyEditor() {
 
         {/* Validation Properties */}
         <ValidationProperties />
+
+        {/* Conditional Properties */}
+        <ConditionalProperties />
       </Box>
 
       {/* Footer Actions */}

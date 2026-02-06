@@ -82,6 +82,10 @@ export const submissionsApi = {
   updateSubmission: (id: string, data: UpdateSubmissionRequest) =>
     apiClient.put<SubmissionDto>(`/submissions/${id}`, data),
 
+  // 記錄報告下載時間
+  recordReportDownloaded: (id: string) =>
+    apiClient.patch<void>(`/submissions/${id}/report-downloaded`),
+
   // 刪除提交
   deleteSubmission: (id: string) =>
     apiClient.delete<void>(`/submissions/${id}`),

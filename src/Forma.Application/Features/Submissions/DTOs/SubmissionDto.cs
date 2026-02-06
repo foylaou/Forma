@@ -21,6 +21,7 @@ public class SubmissionDto
     public string? ReviewedByUsername { get; set; }
     public DateTime? ReviewedAt { get; set; }
     public string? IpAddress { get; set; }
+    public DateTime? ReportDownloadedAt { get; set; }
     public bool CanEdit { get; set; }
     public bool CanDelete { get; set; }
 }
@@ -38,4 +39,5 @@ public class SubmissionListDto
     public DateTime SubmittedAt { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime? ReviewedAt { get; set; }
+    public DateTime? ReportDownloadedAt { get; set; }
 }

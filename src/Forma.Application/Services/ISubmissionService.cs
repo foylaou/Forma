@@ -39,6 +39,15 @@ public interface ISubmissionService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 記錄報告下載時間
+    /// </summary>
+    Task RecordReportDownloadedAsync(
+        Guid submissionId,
+        Guid currentUserId,
+        bool isSystemAdmin,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 刪除表單提交
     /// </summary>
     Task DeleteSubmissionAsync(

@@ -4,7 +4,7 @@
  * 支援主題、Logo、卡片模式、圓角等設定
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
 import {
   Box,
@@ -35,50 +35,24 @@ import { CardModePreview } from '@/components/form-preview';
 import { resolveTheme, parseProjectTheme } from '@/hooks/useFormTheme';
 import type { ResolvedTheme } from '@/hooks/useFormTheme';
 import type { FormDto } from '@/types/api/forms';
-import type { Field, FormSchema, PageNavigationRule, ConditionalOperator } from '@/types/form';
-
-// ---- Helpers ----
-
-function evaluateCondition(
-  fieldValue: unknown,
-  operator: ConditionalOperator,
-  ruleValue: string | number | boolean
-): boolean {
-  const strValue = String(fieldValue ?? '');
-  const numValue = Number(fieldValue);
-  const ruleStrValue = String(ruleValue);
-  const ruleNumValue = Number(ruleValue);
-
-  switch (operator) {
-    case 'equals': return strValue === ruleStrValue;
-    case 'notEquals': return strValue !== ruleStrValue;
-    case 'contains': return strValue.includes(ruleStrValue);
-    case 'notContains': return !strValue.includes(ruleStrValue);
-    case 'gt': return !isNaN(numValue) && numValue > ruleNumValue;
-    case 'gte': return !isNaN(numValue) && numValue >= ruleNumValue;
-    case 'lt': return !isNaN(numValue) && numValue < ruleNumValue;
-    case 'lte': return !isNaN(numValue) && numValue <= ruleNumValue;
-    case 'isEmpty': return strValue === '' || fieldValue === null || fieldValue === undefined;
-    case 'isNotEmpty': return strValue !== '' && fieldValue !== null && fieldValue !== undefined;
-    case 'in': return ruleStrValue.split(',').map(s => s.trim()).includes(strValue);
-    case 'notIn': return !ruleStrValue.split(',').map(s => s.trim()).includes(strValue);
-    case 'startsWith': return strValue.startsWith(ruleStrValue);
-    case 'endsWith': return strValue.endsWith(ruleStrValue);
-    default: return false;
-  }
-}
+import type { Field, FormSchema, FormPage, PageNavigationRule, ConditionalOperator } from '@/types/form';
+import { evaluateOperator, isFieldVisible, isPageVisible } from '@/lib/conditionEvaluator';
 
 // ---- Sub-components ----
 
-function ProgressTracker({ fields, control }: { fields: Field[]; control: unknown }) {
+function ProgressTracker({ fields, control, watchValues }: { fields: Field[]; control: unknown; watchValues?: Record<string, unknown> }) {
   const [progress, setProgress] = useState(0);
   const [filledCount, setFilledCount] = useState(0);
   const values = useWatch({ control: control as never });
 
   useEffect(() => {
-    if (fields.length === 0) { setProgress(100); setFilledCount(0); return; }
+    // Filter out hidden fields from progress calculation
+    const visibleFields = watchValues
+      ? fields.filter((f) => isFieldVisible(f as Field, watchValues))
+      : fields;
+    if (visibleFields.length === 0) { setProgress(100); setFilledCount(0); return; }
     let filled = 0;
-    fields.forEach((field) => {
+    visibleFields.forEach((field) => {
       const value = values?.[field.name];
       if (value !== undefined && value !== null && value !== '' &&
           !(Array.isArray(value) && value.length === 0)) {
@@ -86,8 +60,8 @@ function ProgressTracker({ fields, control }: { fields: Field[]; control: unknow
       }
     });
     setFilledCount(filled);
-    setProgress(Math.round((filled / fields.length) * 100));
-  }, [values, fields]);
+    setProgress(Math.round((filled / visibleFields.length) * 100));
+  }, [values, fields, watchValues]);
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -246,15 +220,32 @@ export function FormSubmitContent({
   }
 
   // Classic mode
-  const totalPages = schema.pages.length;
-  const currentPage = schema.pages[currentPageIndex];
+  // Watch all form values for conditional evaluation
+  const watchedValues = methods.watch();
+
+  // Compute visible pages (filter by visibilityCondition)
+  const visiblePages = useMemo(() => {
+    return schema.pages.filter((page) =>
+      isPageVisible(page, watchedValues)
+    );
+  }, [schema.pages, watchedValues]);
+
+  const totalPages = visiblePages.length;
+  const currentPage = visiblePages[currentPageIndex] ?? visiblePages[0];
   const isFirstPage = currentPageIndex === 0;
   const isLastPage = currentPageIndex === totalPages - 1;
-  const allFields = schema.pages.flatMap((page) => page.fields);
+  const allFields = visiblePages.flatMap((page) => page.fields);
   const inputFields = allFields.filter(f => !['panel', 'paneldynamic', 'html', 'section', 'hidden', 'welcome', 'ending', 'downloadreport'].includes(f.type));
   const showProgressBar = (schema.settings?.showProgressBar ?? true) && !resolvedTheme.hideProgressBar;
   const allFieldsRequired = schema.settings?.allFieldsRequired ?? false;
   const canGoPrevious = !isFirstPage && (currentPage?.allowPrevious ?? true);
+
+  // Ensure currentPageIndex stays in bounds when pages become hidden
+  useEffect(() => {
+    if (currentPageIndex >= totalPages && totalPages > 0) {
+      setCurrentPageIndex(totalPages - 1);
+    }
+  }, [currentPageIndex, totalPages]);
 
   const handlePrevPage = () => {
     if (currentPageIndex > 0) {
@@ -264,9 +255,10 @@ export function FormSubmitContent({
   };
 
   const handleNextPage = async () => {
-    // Validate current page fields before navigating
+    // Validate current page visible fields before navigating
     const currentFieldNames = currentPage?.fields
       .filter(f => !['panel', 'paneldynamic', 'html', 'section', 'hidden', 'welcome', 'ending', 'downloadreport'].includes(f.type))
+      .filter(f => isFieldVisible(f, watchedValues))
       .map(f => f.name) ?? [];
     if (currentFieldNames.length > 0) {
       const valid = await methods.trigger(currentFieldNames);
@@ -278,8 +270,9 @@ export function FormSubmitContent({
       if (!rules || rules.length === 0) return null;
       for (const rule of rules) {
         const fieldValue = formValues[rule.fieldName];
-        if (evaluateCondition(fieldValue, rule.operator, rule.value)) {
-          const targetIndex = schema.pages.findIndex(p => p.id === rule.targetPageId);
+        if (evaluateOperator(fieldValue, rule.operator, rule.value)) {
+          // Find target in visible pages
+          const targetIndex = visiblePages.findIndex(p => p.id === rule.targetPageId);
           if (targetIndex !== -1) return targetIndex;
         }
       }
@@ -397,7 +390,7 @@ export function FormSubmitContent({
           {totalPages > 1 && (
             <Box sx={{ mb: 4 }}>
               <Stepper activeStep={currentPageIndex} alternativeLabel>
-                {schema.pages.map((page, index) => (
+                {visiblePages.map((page, index) => (
                   <Step key={page.id}>
                     <StepLabel>{page.title || `${index + 1}`}</StepLabel>
                   </Step>
@@ -408,7 +401,7 @@ export function FormSubmitContent({
 
           {/* Progress Bar */}
           {showProgressBar && (
-            <ProgressTracker fields={inputFields} control={methods.control} />
+            <ProgressTracker fields={inputFields} control={methods.control} watchValues={watchedValues} />
           )}
 
           {/* Form Fields */}
@@ -430,11 +423,15 @@ export function FormSubmitContent({
                     </Box>
                   )}
 
-                  {currentPage.fields.map((field) => (
-                    <Box key={field.id} sx={{ mb: 3 }}>
-                      <FieldRenderer field={field} allFieldsRequired={allFieldsRequired} schema={schema} logoUrl={resolvedTheme.logo} />
-                    </Box>
-                  ))}
+                  {currentPage.fields.map((field) => {
+                    // Check field.visible + conditional visibility
+                    if (!isFieldVisible(field, watchedValues)) return null;
+                    return (
+                      <Box key={field.id} sx={{ mb: 3 }}>
+                        <FieldRenderer field={field} allFieldsRequired={allFieldsRequired} schema={schema} logoUrl={resolvedTheme.logo} />
+                      </Box>
+                    );
+                  })}
                 </Box>
               )}
 

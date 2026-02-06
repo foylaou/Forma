@@ -2,29 +2,37 @@
  * FormPreview - Preview mode for the form
  */
 
-import { useState, useEffect } from 'react';
-import { Box, Paper, Typography, Button, Divider, LinearProgress } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { useState, useEffect, useMemo } from 'react';
+import { Box, Paper, Typography, Button, Divider, LinearProgress, Stepper, Step, StepLabel } from '@mui/material';
+import {
+  Close as CloseIcon,
+  NavigateNext as NextIcon,
+  NavigateBefore as PrevIcon,
+} from '@mui/icons-material';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { FieldRenderer } from '@/components/form-fields';
-import { useFormBuilderStore, useActivePageFields, useActivePage } from '@/stores/formBuilderStore';
+import { isFieldVisible, isPageVisible } from '@/lib/conditionEvaluator';
+import { useFormBuilderStore } from '@/stores/formBuilderStore';
 
 // Progress tracker component
-function ProgressTracker({ fields, control }: { fields: { name: string; required?: boolean }[]; control: unknown }) {
+function ProgressTracker({ fields, control, watchValues }: { fields: { name: string; visible?: boolean; required?: boolean; conditional?: unknown }[]; control: unknown; watchValues?: Record<string, unknown> }) {
   const [progress, setProgress] = useState(0);
   const [filledCount, setFilledCount] = useState(0);
   const values = useWatch({ control: control as never });
 
   useEffect(() => {
-    if (fields.length === 0) {
-      setProgress(100); // No fields means "complete"
+    // Filter out hidden fields (visible=false + conditional)
+    const visibleFields = watchValues
+      ? fields.filter((f) => isFieldVisible(f as { visible?: boolean; conditional?: import('@/types/form').Conditional }, watchValues))
+      : fields;
+    if (visibleFields.length === 0) {
+      setProgress(100);
       setFilledCount(0);
       return;
     }
 
-    // Count filled fields
     let filled = 0;
-    fields.forEach((field) => {
+    visibleFields.forEach((field) => {
       const value = values?.[field.name];
       if (value !== undefined && value !== null && value !== '' &&
           !(Array.isArray(value) && value.length === 0)) {
@@ -33,8 +41,8 @@ function ProgressTracker({ fields, control }: { fields: { name: string; required
     });
 
     setFilledCount(filled);
-    setProgress(Math.round((filled / fields.length) * 100));
-  }, [values, fields]);
+    setProgress(Math.round((filled / visibleFields.length) * 100));
+  }, [values, fields, watchValues]);
 
   return (
     <Box sx={{ px: 2, py: 1.5, backgroundColor: 'grey.100', borderBottom: 1, borderColor: 'divider' }}>
@@ -64,23 +72,57 @@ function ProgressTracker({ fields, control }: { fields: { name: string; required
 
 export function FormPreview() {
   const { togglePreviewMode, schema } = useFormBuilderStore();
-  const fields = useActivePageFields();
-  const activePage = useActivePage();
-
-  // Filter out non-input fields (like panel, html, section)
-  const inputFields = fields.filter(f =>
-    !['panel', 'paneldynamic', 'html', 'section', 'hidden'].includes(f.type)
-  );
-
-  const showProgressBar = schema.settings?.showProgressBar ?? true;
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
   const methods = useForm({
     mode: 'onChange',
   });
 
+  const watchedValues = methods.watch();
+
+  // Compute visible pages
+  const visiblePages = useMemo(() => {
+    return schema.pages.filter((page) =>
+      isPageVisible(page, watchedValues)
+    );
+  }, [schema.pages, watchedValues]);
+
+  const totalPages = visiblePages.length;
+  const currentPage = visiblePages[currentPageIndex] ?? visiblePages[0];
+  const isFirstPage = currentPageIndex === 0;
+  const isLastPage = currentPageIndex === totalPages - 1;
+
+  // Ensure currentPageIndex stays in bounds
+  useEffect(() => {
+    if (currentPageIndex >= totalPages && totalPages > 0) {
+      setCurrentPageIndex(totalPages - 1);
+    }
+  }, [currentPageIndex, totalPages]);
+
+  // All visible input fields for progress bar
+  const allInputFields = useMemo(() => {
+    return visiblePages
+      .flatMap((page) => page.fields)
+      .filter((f) => !['panel', 'paneldynamic', 'html', 'section', 'hidden', 'welcome', 'ending', 'downloadreport'].includes(f.type));
+  }, [visiblePages]);
+
+  const showProgressBar = schema.settings?.showProgressBar ?? true;
+
   const handleSubmit = (data: Record<string, unknown>) => {
     console.log('Preview form data:', data);
     alert('表單資料已記錄到 Console');
+  };
+
+  const handleNextPage = () => {
+    if (currentPageIndex < totalPages - 1) {
+      setCurrentPageIndex(currentPageIndex + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(currentPageIndex - 1);
+    }
   };
 
   return (
@@ -140,7 +182,7 @@ export function FormPreview() {
 
         {/* Progress Bar */}
         {showProgressBar && (
-          <ProgressTracker fields={inputFields} control={methods.control} />
+          <ProgressTracker fields={allInputFields} control={methods.control} watchValues={watchedValues} />
         )}
 
         {/* Content */}
@@ -154,15 +196,28 @@ export function FormPreview() {
             </Box>
           )}
 
+          {/* Page Stepper */}
+          {totalPages > 1 && (
+            <Box sx={{ mb: 3 }}>
+              <Stepper activeStep={currentPageIndex} alternativeLabel>
+                {visiblePages.map((page, index) => (
+                  <Step key={page.id}>
+                    <StepLabel>{page.title || `${index + 1}`}</StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+            </Box>
+          )}
+
           {/* Page Title */}
-          {activePage?.title && (
+          {currentPage?.title && totalPages > 1 && (
             <Box sx={{ mb: 3 }}>
               <Typography variant="h5" gutterBottom>
-                {activePage.title}
+                {currentPage.title}
               </Typography>
-              {activePage.description && (
+              {currentPage.description && (
                 <Typography variant="body2" color="text.secondary">
-                  {activePage.description}
+                  {currentPage.description}
                 </Typography>
               )}
               <Divider sx={{ mt: 2 }} />
@@ -172,7 +227,7 @@ export function FormPreview() {
           {/* Form Fields */}
           <FormProvider {...methods}>
             <form onSubmit={methods.handleSubmit(handleSubmit)}>
-              {fields.length === 0 ? (
+              {!currentPage || currentPage.fields.length === 0 ? (
                 <Box
                   sx={{
                     py: 8,
@@ -188,17 +243,47 @@ export function FormPreview() {
                 </Box>
               ) : (
                 <>
-                  {fields.map((field) => (
-                    <Box key={field.id} sx={{ mb: 3 }}>
-                      <FieldRenderer field={field} />
-                    </Box>
-                  ))}
+                  {currentPage.fields.map((field) => {
+                    // Check field.visible + conditional visibility
+                    if (!isFieldVisible(field, watchedValues)) return null;
+                    return (
+                      <Box key={field.id} sx={{ mb: 3 }}>
+                        <FieldRenderer field={field} />
+                      </Box>
+                    );
+                  })}
 
-                  {/* Submit Button */}
-                  <Box sx={{ mt: 4, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                    <Button type="submit" variant="contained" size="large">
-                      {schema.metadata.submitButtonText || '提交'}
+                  {/* Navigation / Submit */}
+                  <Box sx={{ mt: 4, pt: 2, borderTop: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<PrevIcon />}
+                      onClick={handlePrevPage}
+                      disabled={isFirstPage}
+                      sx={{ visibility: isFirstPage ? 'hidden' : 'visible' }}
+                    >
+                      上一頁
                     </Button>
+
+                    {totalPages > 1 && (
+                      <Typography variant="body2" color="text.secondary">
+                        {currentPageIndex + 1} / {totalPages}
+                      </Typography>
+                    )}
+
+                    {isLastPage ? (
+                      <Button type="submit" variant="contained" size="large">
+                        {schema.metadata.submitButtonText || '提交'}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        endIcon={<NextIcon />}
+                        onClick={handleNextPage}
+                      >
+                        下一頁
+                      </Button>
+                    )}
                   </Box>
                 </>
               )}

@@ -54,14 +54,16 @@ import {
   CheckCircle as CompleteIcon,
   Cancel as AbandonIcon,
   Timer as TimerIcon,
+  PictureAsPdf as PdfIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { MainLayout } from '@/components/layout';
 import { formsApi } from '@/lib/api/forms';
 import { submissionsApi } from '@/lib/api/submissions';
+import { parseProjectTheme, resolveTheme } from '@/hooks/useFormTheme';
 import type { FormDto } from '@/types/api/forms';
 import type { SubmissionListDto, SubmissionDto } from '@/types/api/submissions';
-import type { FormSchema, Field } from '@/types/form';
+import type { FormSchema, Field, DownloadReportFieldProperties } from '@/types/form';
 
 // ============================================================================
 // Constants
@@ -240,6 +242,34 @@ function formatValue(value: unknown, field?: Field | null): string {
 }
 
 // ============================================================================
+// Report Download Helper
+// ============================================================================
+
+function findDownloadReportField(schema: FormSchema | null): Field | null {
+  if (!schema) return null;
+  for (const page of schema.pages) {
+    for (const field of page.fields) {
+      if (field.type === 'downloadreport') return field;
+    }
+  }
+  return null;
+}
+
+async function downloadReportForSubmission(
+  schema: FormSchema,
+  submissionData: Record<string, unknown>,
+  reportDownloadedAt?: string,
+  logoUrl?: string,
+) {
+  const reportField = findDownloadReportField(schema);
+  if (!reportField) return;
+  const properties = (reportField.properties ?? {}) as DownloadReportFieldProperties;
+  const reportDate = reportDownloadedAt ? new Date(reportDownloadedAt) : undefined;
+  const { generateReport } = await import('@/components/form-fields/report/generateReport');
+  await generateReport({ schema, values: submissionData, properties, logoUrl, reportDate });
+}
+
+// ============================================================================
 // Submission Detail Dialog
 // ============================================================================
 
@@ -248,9 +278,10 @@ interface SubmissionDetailDialogProps {
   onClose: () => void;
   submissionId: string | null;
   schema: FormSchema | null;
+  logoUrl?: string;
 }
 
-function SubmissionDetailDialog({ open, onClose, submissionId, schema }: SubmissionDetailDialogProps) {
+function SubmissionDetailDialog({ open, onClose, submissionId, schema, logoUrl }: SubmissionDetailDialogProps) {
   const [loading, setLoading] = useState(false);
   const [submission, setSubmission] = useState<SubmissionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -336,6 +367,18 @@ function SubmissionDetailDialog({ open, onClose, submissionId, schema }: Submiss
         )}
       </DialogContent>
       <DialogActions>
+        {schema && findDownloadReportField(schema) && submission && (
+          <Button
+            startIcon={<PdfIcon />}
+            onClick={() => {
+              if (schema && submission) {
+                downloadReportForSubmission(schema, data, submission.reportDownloadedAt, logoUrl);
+              }
+            }}
+          >
+            下載報告
+          </Button>
+        )}
         <Button onClick={onClose}>關閉</Button>
       </DialogActions>
     </Dialog>
@@ -644,6 +687,8 @@ interface ResponsesTabProps {
   deleteLoading: string | null;
   allSubmissionData: Record<string, unknown>[];
   submissionDataMap: Record<string, Record<string, unknown>>;
+  onDownloadReport?: (submission: SubmissionListDto) => void;
+  hasReportField?: boolean;
 }
 
 function ResponsesTab({
@@ -660,6 +705,8 @@ function ResponsesTab({
   onDeleteSelected,
   deleteLoading,
   submissionDataMap,
+  onDownloadReport,
+  hasReportField,
 }: ResponsesTabProps) {
   const expandedFields = useMemo(() => getExpandedFields(schema), [schema]);
 
@@ -877,6 +924,13 @@ function ResponsesTab({
                           <ViewIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
+                      {hasReportField && onDownloadReport && (
+                        <Tooltip title="下載報告">
+                          <IconButton size="small" color="primary" onClick={() => onDownloadReport(submission)}>
+                            <PdfIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Tooltip title="刪除">
                         <IconButton
                           size="small"
@@ -1037,6 +1091,28 @@ export function FormSubmissionsPage() {
     });
     return map;
   }, [allFullSubmissions]);
+
+  // Check if schema has downloadreport field
+  const hasReportField = useMemo(() => !!findDownloadReportField(schema), [schema]);
+
+  // Resolve logo URL for report
+  const logoUrl = useMemo(() => {
+    if (!form || !schema) return undefined;
+    const projectTheme = parseProjectTheme(form.projectSettings);
+    const resolved = resolveTheme(projectTheme, schema.settings);
+    return resolved.logo;
+  }, [form, schema]);
+
+  const handleDownloadReport = async (submission: SubmissionListDto) => {
+    if (!schema) return;
+    try {
+      const detail = await submissionsApi.getSubmission(submission.id);
+      const data = JSON.parse(detail.submissionData);
+      await downloadReportForSubmission(schema, data, detail.reportDownloadedAt, logoUrl);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '下載報告失敗');
+    }
+  };
 
   const handleViewSubmission = (id: string) => {
     setSelectedSubmissionId(id);
@@ -1203,6 +1279,8 @@ export function FormSubmissionsPage() {
           deleteLoading={deleteLoading}
           allSubmissionData={allSubmissionData}
           submissionDataMap={submissionDataMap}
+          onDownloadReport={handleDownloadReport}
+          hasReportField={hasReportField}
         />
       )}
 
@@ -1212,6 +1290,7 @@ export function FormSubmissionsPage() {
         onClose={() => setDetailDialogOpen(false)}
         submissionId={selectedSubmissionId}
         schema={schema}
+        logoUrl={logoUrl}
       />
     </MainLayout>
   );
